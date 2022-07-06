@@ -1,5 +1,5 @@
 cssselect==1.1.0
-lxml==4.6.5
+lxml==4.9.1
 psycopg2-binary==2.8.6
 textstat==0.7.0
 websocket-client==0.57.0
