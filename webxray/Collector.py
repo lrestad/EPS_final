@@ -83,7 +83,7 @@ class Collector:
 			from webxray.PostgreSQLDriver import PostgreSQLDriver
 			sql_driver = PostgreSQLDriver(self.db_name)
 		else:
-			print('INVALID DB ENGINE FOR %s, QUITTING!' % self.db_engine)
+			print('INVALID DB ENGINE FOR %s, QUITTING!' % db_engine)
 			quit()
 
 		# keep getting tasks from queue until none are left at max attempt level
@@ -252,7 +252,7 @@ class Collector:
 			
 			# keep track of domains
 			all_3p_cookie_domains 		= set()
-			all_3p_dom_storage_domains 	= set()
+			all_3p_misc_storage_domains = set()
 			all_3p_request_domains 		= set()
 			all_3p_response_domains 	= set()
 			all_3p_websocket_domains 	= set()
@@ -280,8 +280,8 @@ class Collector:
 						'requests'		: store_result['page_3p_request_domains'],
 						'responses'		: store_result['page_3p_response_domains'],
 						'websockets'	: store_result['page_3p_websocket_domains'],
-						'dom_storage'	: store_result['page_3p_dom_storage_domains'],
-						'cookies'		: store_result['page_3p_dom_storage_domains']
+						'misc_storage'	: store_result['page_3p_misc_storage_domains'],
+						'cookies'		: store_result['page_3p_misc_storage_domains']
 					})
 
 					for lookup_item in page_lookup_table:
@@ -292,8 +292,8 @@ class Collector:
 					all_3p_request_domains.update(store_result['page_3p_request_domains'])
 					all_3p_response_domains.update(store_result['page_3p_response_domains'])
 					all_3p_websocket_domains.update(store_result['page_3p_websocket_domains'])
-					all_3p_dom_storage_domains.update(store_result['page_3p_dom_storage_domains'])
-					all_3p_cookie_domains.update(store_result['page_3p_dom_storage_domains'])
+					all_3p_misc_storage_domains.update(store_result['page_3p_misc_storage_domains'])
+					all_3p_cookie_domains.update(store_result['page_3p_misc_storage_domains'])
 
 			if all_crawls_ok:
 				sql_driver.remove_task_from_queue(target,task)
@@ -304,7 +304,7 @@ class Collector:
 					'requests'		: all_3p_request_domains,
 					'responses'		: all_3p_response_domains,
 					'websockets'	: all_3p_websocket_domains,
-					'dom_storage'	: all_3p_dom_storage_domains,
+					'misc_storage'	: all_3p_misc_storage_domains,
 					'cookies'		: all_3p_cookie_domains
 				})
 
@@ -356,7 +356,7 @@ class Collector:
 			else:
 				domain_lookup_table[domain]['is_websocket'] = True
 
-		for domain, domain_owner_id in domains['dom_storage']:
+		for domain, domain_owner_id in domains['misc_storage']:
 			if domain not in domain_lookup_table:
 				domain_lookup_table[domain] = {f'{type}_id': id, 'domain': domain, 'domain_owner_id': domain_owner_id, 'is_request': False,'is_response':False,'is_cookie':False,'is_websocket':False,'is_domstorage':True}
 			else:
@@ -382,7 +382,15 @@ class Collector:
 		flush_crawl_task_queue	= params['flush_crawl_task_queue']
 
 		# only need this sql_driver to build the task list
-		sql_driver = PostgreSQLDriver(self.db_name)
+		if self.db_engine == 'sqlite':
+			from webxray.SQLiteDriver import SQLiteDriver
+			sql_driver = SQLiteDriver(self.db_name)
+		elif self.db_engine == 'postgres':
+			from webxray.PostgreSQLDriver import PostgreSQLDriver
+			sql_driver = PostgreSQLDriver(self.db_name)
+		else:
+			print('INVALID DB ENGINE FOR %s, QUITTING!' % db_engine)
+			quit()
 
 		# open list of pages
 		try:

@@ -9,19 +9,24 @@
 
 # standard python packages
 import datetime
+import multiprocessing
 import optparse
 import os
 import re
 import socket
+import sys
 import time
+import urllib.parse
+import urllib.request
 
 # set up database connection
 db_engine = 'sqlite'
+
 if db_engine == 'sqlite':
 	from webxray.SQLiteDriver import SQLiteDriver
 	sql_driver = SQLiteDriver()
 
-	# pool_size sets how many parallel processes are run
+	# pool_size sets how many parellel processes are run
 	#	when using sqlite we set to 1 to avoid issues with
 	#	multiple processes trying to use sqlite.
 	pool_size = 1
@@ -34,7 +39,7 @@ elif db_engine == 'postgres':
 	#	one process per processor core
 	pool_size = None
 else:
-	print('INVALID DB ENGINE FOR %s, QUITTING!' % db_engine)
+	print('INVALID DB ENGINE FOR "%s", QUITTING!' % db_engine)
 	quit()
 
 # import our custom utilities
@@ -291,7 +296,7 @@ def interaction():
 		interaction()
 # interaction
 
-def collect(db_name, pages_file_name=None, task='get_scan'):
+def collect(db_name, pages_file_name=None, crawl_file_name=None, task='get_scan'):
 	"""
 	manage the loading of pages, extracting relevant data, and storing to db
 	may also be called in stand-alone with 'run_webxray.py -c [DB_NAME] [PAGE_FILE_NAME]'
@@ -318,6 +323,8 @@ def collect(db_name, pages_file_name=None, task='get_scan'):
 		build_task_queue(db_name, 'get_policy')
 	elif task=='get_random_crawl':
 		build_task_queue(db_name, 'get_random_crawl', pages_file_name=pages_file_name)
+	elif task=='get_crawl':
+		build_task_queue(db_name, 'get_crawl', crawl_file_name=crawl_file_name)
 
 	collector.run(task='process_tasks_from_queue', pool_size=pool_size)
 
@@ -428,7 +435,6 @@ def analyze(db_name):
 	reporter.generate_stats_report()
 	reporter.generate_aggregated_tracking_attribution_report()
 	reporter.generate_3p_domain_report()
-	reporter.generate_3p_aggregate_owner_report()
 	reporter.generate_3p_request_report()
 	reporter.generate_3p_request_report('script')
 	reporter.generate_use_report()
@@ -516,7 +522,7 @@ def rate_estimate(db_name, client_id):
 def store_results_from_queue():
 	"""
 	If we have results in our result_queue we will
-		process/store them.  Can be run in parallel
+		process/store them.  Can be run in parallell
 		with server if set to queue results.
 	"""
 	from webxray.Collector import Collector
@@ -567,7 +573,7 @@ if __name__ == '__main__':
 		'--build_queue',
 		action='store_true',
 		dest='build_queue',
-		help='Build page queue: Should be run on db server, leave scanning to workers - Args: [db_name] [page_file_name or crawl_file_name]'
+		help='Build page queue: Should be run on db server, leave scanning to workers - Args: [db_name] [task: get_scan, get_random_crawl, get_crawl] [page_file_name or crawl_file_name]'
 	)
 	parser.add_option(
 		'--worker',

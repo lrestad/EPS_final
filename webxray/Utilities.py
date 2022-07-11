@@ -95,7 +95,7 @@ class Utilities:
 				'client_crawl_retries'			: 5,
 				'client_page_load_strategy'		: 'none',
 				'client_reject_redirects'		: False,
-				'client_min_internal_links'		: 5,
+				'client_min_internal_links'		: None,
 				'max_attempts'					: 5,
 				'store_1p'						: True,
 				'store_base64'					: False,
@@ -104,7 +104,7 @@ class Utilities:
 				'store_source'					: False,
 				'store_page_text'				: False,
 				'store_links'					: True,
-				'store_dom_storage'				: True,
+				'store_misc_storage'			: True,
 				'store_responses'				: True,
 				'store_request_xtra_headers'	: True,
 				'store_response_xtra_headers'	: True,
@@ -114,8 +114,8 @@ class Utilities:
 				'store_event_source_msgs'		: True,
 				'store_cookies'					: True,
 				'store_security_details'		: True,
-				'timeseries_enabled'			: True,
-				'timeseries_interval'			: 0
+				'timeseries_enabled'			: False,
+				'timeseries_interval'			: 10
 			}
 		elif config_type == 'forensic':
 			return {
@@ -131,7 +131,7 @@ class Utilities:
 				'client_crawl_retries'			: 5,
 				'client_page_load_strategy'		: 'none',
 				'client_reject_redirects'		: True,
-				'client_min_internal_links'		: 5,
+				'client_min_internal_links'		: None,
 				'max_attempts'					: 5,
 				'store_1p'						: True,
 				'store_base64'					: True,
@@ -140,7 +140,7 @@ class Utilities:
 				'store_source'					: True,
 				'store_page_text'				: True,
 				'store_links'					: True,
-				'store_dom_storage'				: True,
+				'store_misc_storage'			: True,
 				'store_responses'				: True,
 				'store_request_xtra_headers'	: True,
 				'store_response_xtra_headers'	: True,
@@ -150,7 +150,7 @@ class Utilities:
 				'store_event_source_msgs'		: True,
 				'store_cookies'					: True,
 				'store_security_details'		: True,
-				'timeseries_enabled'			: True,
+				'timeseries_enabled'			: False,
 				'timeseries_interval'			: 0
 			}
 		elif config_type == 'custom':

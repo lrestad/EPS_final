@@ -47,6 +47,7 @@ class SingleScan:
 		print('\tSingle Site Test On: %s' % url)
 		print('\t - Browser type is %s' % config['client_browser_type'])
 		print('\t - Browser max wait time is %s seconds' % config['client_max_wait'])
+		print('\tImportant Note: If you run more than one single test at a time you will encounter errors - some of which are silent!')
 
 		# make sure it is an http(s) address
 		if not re.match('^https?://', url): 
@@ -108,19 +109,31 @@ class SingleScan:
 		for count,cookie in enumerate(cookie_list):
 			print(f'\t[{count}] {cookie}')
 			
-		print('\n\t------------------{ Local Storage }------------------')
-		for item in browser_output['dom_storage']:
-			print('\t%s (is local: %s): %s' % (item['security_origin'],item['is_local_storage'],item['key']))
+		print('\n\t------------------{ LocalStorage }------------------')
+		for item in browser_output['misc_storage']:
+			if item['type'] == 'local_storage':	print(f"\t{item['security_origin']}: {item['key']}")
+
+		print('\n\t------------------{ SessionStorage }------------------')
+		for item in browser_output['misc_storage']:
+			if item['type'] == 'session_storage':	print(f"\t{item['security_origin']}: {item['key']}")
+
+		print('\n\t------------------{ IndexedDB }------------------')
+		for item in browser_output['misc_storage']:
+			if item['type'] == 'indexeddb':	print(f"\t{item['security_origin']}: {item['key']}")
+
+		print('\n\t------------------{ CacheStorage }------------------')
+		for item in browser_output['misc_storage']:
+			if item['type'] == 'cache_storage':	print(f"\t{item['security_origin']}: {item['key']}")
 
 		print('\n\t------------------{ Domains Requested }------------------')
 		request_domains = set()
 
 		for request in browser_output['requests']:
 			# if the request starts with 'data'/etc we can't parse tld anyway, so skip
-			if re.match('^(data|about|chrome).+', request['url']):
+			if re.match('^(data|about|chrome|blob|file).+', request['url']):
 				continue
 
-			# parse domain from the security_origin
+			# parse domain from the requested url
 			domain_info = self.url_parser.get_parsed_domain_info(request['url'])
 			if domain_info['success'] == False:
 				print('\tUnable to parse domain info for %s with error %s' % (request['url'], domain_info['result']))

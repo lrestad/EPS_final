@@ -72,11 +72,11 @@ class OutputStore:
 		if self.debug: print('going to store scan %s' % browser_output['start_url'])
 
 		# keep track of domains
-		page_3p_cookie_domains 		= set()
-		page_3p_dom_storage_domains = set()
-		page_3p_request_domains 	= set()
-		page_3p_response_domains 	= set()
-		page_3p_websocket_domains 	= set()
+		page_3p_cookie_domains 		 = set()
+		page_3p_misc_storage_domains = set()
+		page_3p_request_domains 	 = set()
+		page_3p_response_domains 	 = set()
+		page_3p_websocket_domains 	 = set()
 
 		# convert from timestamp to datetime object that will go to the db
 		accessed = datetime.fromtimestamp(browser_output['accessed'])
@@ -308,14 +308,14 @@ class OutputStore:
 				link_id = self.sql_driver.add_link(link)
 				if link_id: self.sql_driver.join_link_to_page(page_id,link_id)
 
-		# PROCESS DOM_STORAGE
-		if self.config['store_dom_storage']:
-			if self.debug: print('going to process dom storage %s' % browser_output['start_url'])
-			for dom_storage in browser_output['dom_storage']:
+		# PROCESS misc_storage
+		if self.config['store_misc_storage']:
+			if self.debug: print('going to process misc storage %s' % browser_output['start_url'])
+			for misc_storage in browser_output['misc_storage']:
 				# parse domain from the security_origin, which is equivalent to a url
-				domain_info = self.url_parser.get_parsed_domain_info(dom_storage['security_origin'])
+				domain_info = self.url_parser.get_parsed_domain_info(misc_storage['security_origin'])
 				if domain_info['success'] == False:
-					err_msg = 'unable to parse domain info for %s with error %s' % (dom_storage['security_origin'], domain_info['result'])
+					err_msg = 'unable to parse domain info for %s with error %s' % (misc_storage['security_origin'], domain_info['result'])
 					if self.debug: print(err_msg)
 					self.sql_driver.log_error({
 						'client_id'		: client_id, 
@@ -327,20 +327,20 @@ class OutputStore:
 				else:
 					# self.sql_driver.add_domain both stores the new domain and returns its db row id
 					# if it is already in db just return the existing id
-					dom_storage['domain_id'] = self.sql_driver.add_domain(domain_info['result'])
+					misc_storage['domain_id'] = self.sql_driver.add_domain(domain_info['result'])
 
 				# mark if third-party storage
 				if final_url_domain != domain_info['result']['domain']:
-					dom_storage['is_3p'] = True
+					misc_storage['is_3p'] = True
 				else:
-					dom_storage['is_3p'] = False
+					misc_storage['is_3p'] = False
 
 				# key to page
-				dom_storage['page_id'] = page_id
+				misc_storage['page_id'] = page_id
 
 				# replace null b/c postgres will die otherwise
-				dom_storage['key']		= dom_storage['key'].replace('\x00','NULL_REPLACED_FOR_PSQL')
-				dom_storage['value']	= dom_storage['value'].replace('\x00','NULL_REPLACED_FOR_PSQL')
+				misc_storage['key']		= misc_storage['key'].replace('\x00','NULL_REPLACED_FOR_PSQL')
+				if misc_storage['value']: misc_storage['value']	= misc_storage['value'].replace('\x00','NULL_REPLACED_FOR_PSQL')
 
 				# there types of illegal utf-8 characters that psql doesn't like, eg trying to store
 				#	'\uded5' gives this error when storing in psql: 
@@ -349,19 +349,19 @@ class OutputStore:
 				# to overcome the above, we use python's backslashreplace to keep the original data in 
 				#	a way that won't cause our queries to die
 				# see https://docs.python.org/3/library/codecs.html#error-handlers
-				dom_storage['key']		= dom_storage['key'].encode('utf-8','backslashreplace')
-				dom_storage['value']	= dom_storage['value'].encode('utf-8','backslashreplace')
+				misc_storage['key']		= misc_storage['key'].encode('utf-8','backslashreplace')
+				if misc_storage['value']: misc_storage['value']	= misc_storage['value'].encode('utf-8','backslashreplace')
 
 				# now that we've encoded with backslashes we decode to get the semi-original data
-				dom_storage['key']		= dom_storage['key'].decode('utf-8')
-				dom_storage['value']	= dom_storage['value'].decode('utf-8')
+				misc_storage['key']		= misc_storage['key'].decode('utf-8')
+				if misc_storage['value']: misc_storage['value']	= misc_storage['value'].decode('utf-8')
 
 				# all done with this item
-				self.sql_driver.add_dom_storage(dom_storage)
+				self.sql_driver.add_misc_storage(misc_storage)
 
 				# update domains
-				if dom_storage['is_3p']:
-					page_3p_dom_storage_domains.add((domain_info['result']['domain'],domain_info['result']['domain_owner_id']))
+				if misc_storage['is_3p']:
+					page_3p_misc_storage_domains.add((domain_info['result']['domain'],domain_info['result']['domain_owner_id']))
 
 		# PROCESS LOAD FINISH
 		if self.debug: print('going to process load finish data %s' % browser_output['start_url'])
@@ -851,7 +851,7 @@ class OutputStore:
 			'page_3p_request_domains'		: page_3p_request_domains,
 			'page_3p_response_domains'		: page_3p_response_domains,
 			'page_3p_websocket_domains'		: page_3p_websocket_domains,
-			'page_3p_dom_storage_domains'	: page_3p_dom_storage_domains,
+			'page_3p_misc_storage_domains'	: page_3p_misc_storage_domains,
 			'page_3p_cookie_domains'		: page_3p_cookie_domains
 		}
 	# store_scan

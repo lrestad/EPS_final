@@ -105,7 +105,7 @@ class Reporter:
 			print("\t\tTotal Errors:\t\t\t%s" 					% db_summary['total_errors'])
 			print("\t\tTotal Cookies:\t\t\t%s" 					% db_summary['total_cookies'])
 			print("\t\tTotal 3P Cookies:\t\t%s" 				% db_summary['total_3p_cookies'])
-			print("\t\tTotal Dom Storage:\t\t%s" 				% db_summary['total_dom_storage'])
+			print("\t\tTotal Dom Storage:\t\t%s" 				% db_summary['total_misc_storage'])
 			print("\t\tTotal Websockets:\t\t%s" 				% db_summary['total_websockets'])
 			print("\t\tTotal Websocket Events:\t\t%s" 			% db_summary['total_websocket_events'])
 			print("\t\tTotal Requests:\t\t\t%s" 				% db_summary['total_requests'])
@@ -126,7 +126,7 @@ class Reporter:
 		csv_rows.append(('total_errors', 						db_summary['total_errors']))
 		csv_rows.append(('total_cookies', 						db_summary['total_cookies']))
 		csv_rows.append(('total_3p_cookies', 					db_summary['total_3p_cookies']))
-		csv_rows.append(('total_dom_storage', 					db_summary['total_dom_storage']))
+		csv_rows.append(('total_misc_storage', 					db_summary['total_misc_storage']))
 		csv_rows.append(('total_websockets', 					db_summary['total_websockets']))
 		csv_rows.append(('total_websocket_events', 				db_summary['total_websocket_events']))
 		csv_rows.append(('total_requests', 						db_summary['total_requests']))
@@ -299,33 +299,6 @@ class Reporter:
 			else:
 				self.utilities.write_csv(self.report_path,'3p_domains.csv',csv_rows)
 	# generate_3p_domain_report
-
-	def generate_3p_aggregate_owner_report(self):
-		"""
-		This report tells us the most commonly occuring third-party owners.
-		"""
-		print('\t==============================')
-		print('\t Processing 3P Aggregate Owners Report ')
-		print('\t==============================')
-
-		for tld_filter in self.top_tlds:
-			csv_rows = []
-			csv_rows.append(('percent_total','owner','owner_country'))
-
-			# get_3p_domain_percentages returns a list, we slice it to get only desired num_results
-			for item in self.analyzer.get_3p_aggregate_owner_percentages(tld_filter)[:self.num_results]:
-
-				csv_rows.append((
-					item['percent_crawls'],
-					item['owner_name'],
-					item['owner_country'],
-				))
-
-			if tld_filter:
-				self.utilities.write_csv(self.report_path,tld_filter+'-3p_aggregate_owners.csv',csv_rows)
-			else:
-				self.utilities.write_csv(self.report_path,'3p_aggregate_owners.csv',csv_rows)
-	# generate_3p_aggregate_owner_report
 
 	def generate_3p_request_report(self,request_type=None):
 		"""

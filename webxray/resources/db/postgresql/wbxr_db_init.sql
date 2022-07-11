@@ -31,7 +31,7 @@ CREATE EXTENSION pg_trgm;
 -- 	store_source BOOLEAN,
 -- 	store_page_text BOOLEAN,
 -- 	store_links BOOLEAN,
--- 	store_dom_storage BOOLEAN,
+-- 	store_misc_storage BOOLEAN,
 -- 	store_responses BOOLEAN,
 -- 	store_request_xtra_headers BOOLEAN,
 -- 	store_response_xtra_headers BOOLEAN,
@@ -44,7 +44,7 @@ CREATE EXTENSION pg_trgm;
 -- 	timeseries_enabled BOOLEAN,
 -- 	timeseries_interval BIGINT
 -- );
-CREATE TABLE config(client_browser_type TEXT,client_prewait BIGINT,client_no_event_wait BIGINT,client_max_wait BIGINT,client_get_bodies BOOLEAN,client_get_bodies_b64 BOOLEAN,client_get_screen_shot BOOLEAN,client_get_text BOOLEAN,client_crawl_depth BIGINT,client_crawl_retries BIGINT,client_page_load_strategy TEXT,client_reject_redirects BOOLEAN,client_min_internal_links BIGINT,max_attempts BIGINT,modified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,store_1p BOOLEAN,store_base64 BOOLEAN,store_files BOOLEAN,store_screen_shot BOOLEAN,store_source BOOLEAN,store_page_text BOOLEAN,store_links BOOLEAN,store_dom_storage BOOLEAN,store_responses BOOLEAN,store_request_xtra_headers BOOLEAN,store_response_xtra_headers BOOLEAN,store_requests BOOLEAN,store_websockets BOOLEAN,store_websocket_events BOOLEAN,store_event_source_msgs BOOLEAN,store_cookies BOOLEAN,store_security_details BOOLEAN,timeseries_enabled BOOLEAN,timeseries_interval BIGINT);
+CREATE TABLE config(client_browser_type TEXT,client_prewait BIGINT,client_no_event_wait BIGINT,client_max_wait BIGINT,client_get_bodies BOOLEAN,client_get_bodies_b64 BOOLEAN,client_get_screen_shot BOOLEAN,client_get_text BOOLEAN,client_crawl_depth BIGINT,client_crawl_retries BIGINT,client_page_load_strategy TEXT,client_reject_redirects BOOLEAN,client_min_internal_links BIGINT,max_attempts BIGINT,modified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,store_1p BOOLEAN,store_base64 BOOLEAN,store_files BOOLEAN,store_screen_shot BOOLEAN,store_source BOOLEAN,store_page_text BOOLEAN,store_links BOOLEAN,store_misc_storage BOOLEAN,store_responses BOOLEAN,store_request_xtra_headers BOOLEAN,store_response_xtra_headers BOOLEAN,store_requests BOOLEAN,store_websockets BOOLEAN,store_websocket_events BOOLEAN,store_event_source_msgs BOOLEAN,store_cookies BOOLEAN,store_security_details BOOLEAN,timeseries_enabled BOOLEAN,timeseries_interval BIGINT);
 ------------------
 --- TASK_QUEUE ---
 ------------------
@@ -413,22 +413,22 @@ CREATE INDEX index_cookie_domain_id ON cookie(domain_id);
 -- CREATE INDEX index_cookie_name 		ON cookie USING GIN(name gin_trgm_ops);
 -- CREATE INDEX index_cookie_value 	ON cookie USING GIN(value gin_trgm_ops);
 -------------------
---- DOM_STORAGE ---
+--- MISC_STORAGE ---
 -------------------
--- CREATE TABLE dom_storage(
+-- CREATE TABLE misc_storage(
 -- 	id BIGSERIAL PRIMARY KEY,
 -- 	page_id BIGINT REFERENCES page(id) ON DELETE CASCADE,
 -- 	domain_id BIGINT REFERENCES domain(id),
 -- 	security_origin TEXT,
--- 	is_local_storage BOOLEAN,
+-- 	type TEXT,
 -- 	key TEXT,
 -- 	value TEXT,
 -- 	is_3p BOOLEAN
 -- );
-CREATE TABLE dom_storage(id BIGSERIAL PRIMARY KEY,page_id BIGINT REFERENCES page(id) ON DELETE CASCADE,domain_id BIGINT REFERENCES domain(id),security_origin TEXT,is_local_storage BOOLEAN,key TEXT,value TEXT,is_3p BOOLEAN);
-CREATE INDEX index_dom_storage_page_id 			ON dom_storage(page_id);
-CREATE INDEX index_dom_storage_domain_id 		ON dom_storage(domain_id);
--- CREATE INDEX index_dom_storage_security_origin 	ON dom_storage(security_origin);
+CREATE TABLE misc_storage(id BIGSERIAL PRIMARY KEY,page_id BIGINT REFERENCES page(id) ON DELETE CASCADE,domain_id BIGINT REFERENCES domain(id),security_origin TEXT,type TEXT,key TEXT,value TEXT,is_3p BOOLEAN);
+CREATE INDEX index_misc_storage_page_id 			ON misc_storage(page_id);
+CREATE INDEX index_misc_storage_domain_id 		ON misc_storage(domain_id);
+-- CREATE INDEX index_misc_storage_security_origin 	ON misc_storage(security_origin);
 -------------
 --- ERROR ---
 -------------

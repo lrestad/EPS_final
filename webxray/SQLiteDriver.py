@@ -117,7 +117,7 @@ class SQLiteDriver:
 				store_source,
 				store_page_text,
 				store_links,
-				store_dom_storage,
+				store_misc_storage,
 				store_responses,
 				store_request_xtra_headers,
 				store_response_xtra_headers,
@@ -186,7 +186,7 @@ class SQLiteDriver:
 			config['store_source'],
 			config['store_page_text'],
 			config['store_links'],
-			config['store_dom_storage'],
+			config['store_misc_storage'],
 			config['store_responses'],
 			config['store_request_xtra_headers'],
 			config['store_response_xtra_headers'],
@@ -232,7 +232,7 @@ class SQLiteDriver:
 				store_source,
 				store_page_text,
 				store_links,
-				store_dom_storage,
+				store_misc_storage,
 				store_responses,
 				store_request_xtra_headers,
 				store_response_xtra_headers,
@@ -276,7 +276,7 @@ class SQLiteDriver:
 			'store_source'					: result[18],
 			'store_page_text'				: result[19],
 			'store_links'					: result[20],
-			'store_dom_storage'				: result[21],
+			'store_misc_storage'				: result[21],
 			'store_responses'				: result[22],
 			'store_request_xtra_headers'	: result[23],
 			'store_response_xtra_headers'	: result[24],
@@ -938,18 +938,18 @@ class SQLiteDriver:
 		return self.db.lastrowid
 	# add_page
 
-	def add_dom_storage(self, dom_storage):
+	def add_misc_storage(self, misc_storage):
 		"""
-		stores a dom_storage item, should fail ungracefully if the page_id or domain_id does not exist
+		stores a misc_storage item, should fail ungracefully if the page_id or domain_id does not exist
 
 		returns nothing
 		"""
 		self.db.execute("""
-			INSERT INTO dom_storage (
+			INSERT INTO misc_storage (
 				page_id,
 				domain_id,
 				security_origin,
-				is_local_storage,
+				type,
 				key,
 				value,
 				is_3p
@@ -963,17 +963,17 @@ class SQLiteDriver:
 				?
 			)""",
 			(	
-				dom_storage['page_id'],
-				dom_storage['domain_id'],
-				dom_storage['security_origin'],
-				dom_storage['is_local_storage'],
-				dom_storage['key'],
-				dom_storage['value'],
-				dom_storage['is_3p']
+				misc_storage['page_id'],
+				misc_storage['domain_id'],
+				misc_storage['security_origin'],
+				misc_storage['type'],
+				misc_storage['key'],
+				misc_storage['value'],
+				misc_storage['is_3p']
 			)
 		)
 		self.db_conn.commit()
-	# add_dom_storage
+	# add_misc_storage
 
 	def add_cookie(self, cookie):
 		"""
@@ -2408,11 +2408,11 @@ class SQLiteDriver:
 		Returns 3p request domains and owner_ids
 		"""
 		self.db.execute("""
-			SELECT DISTINCT page.crawl_id, dom_storage_domain.domain, dom_storage_domain.domain_owner_id
+			SELECT DISTINCT page.crawl_id, misc_storage_domain.domain, misc_storage_domain.domain_owner_id
 			FROM page
-			JOIN dom_storage ON dom_storage.page_id = page.id
-			JOIN domain AS dom_storage_domain ON dom_storage_domain.id = dom_storage.domain_id
-			WHERE dom_storage.is_3p IS TRUE
+			JOIN misc_storage ON misc_storage.page_id = page.id
+			JOIN domain AS misc_storage_domain ON misc_storage_domain.id = misc_storage.domain_id
+			WHERE misc_storage.is_3p IS TRUE
 		""")
 		return self.db.fetchall()
 	# get_crawl_id_3p_domstorage_domain_info
@@ -2818,10 +2818,10 @@ class SQLiteDriver:
 		return self.db.fetchall()
 	# get_ip_owners
 
-	def get_dom_storage_count(self):
-		self.db.execute("SELECT COUNT(*) FROM dom_storage")
+	def get_misc_storage_count(self):
+		self.db.execute("SELECT COUNT(*) FROM misc_storage")
 		return self.db.fetchone()[0]
-	# get_dom_storage_count
+	# get_misc_storage_count
 
 	def get_websocket_count(self):
 		self.db.execute("SELECT COUNT(*) FROM websocket")

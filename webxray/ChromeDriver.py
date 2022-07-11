@@ -72,6 +72,9 @@ class ChromeDriver:
 				exit()
 		
 		# use port offset to avoid collissions between processes
+		#	note that if two single scan processes are running they may
+		#	end up using the same connection and bad things will
+		#	happen
 		port = 9222+port_offset
 
 		# each process will use it's own debugging port or we use default 9222
@@ -203,6 +206,8 @@ class ChromeDriver:
 			and potentially allow for more tracking.
 		"""
 
+		if self.debug: print('Running get_crawl task.')
+
 		# setting this globally prevents the browser
 		#	from being closed after get_scan
 		self.is_crawl = True
@@ -245,6 +250,8 @@ class ChromeDriver:
 			would skew our ability to categorize cookies as first
 			or third-party.
 		"""
+
+		if self.debug: print('Running get_random_crawl task.')
 
 		# setting this globally prevents the browser
 		#	from being closed after get_scan
@@ -381,6 +388,8 @@ class ChromeDriver:
 			for doing text capture.
 		"""
 
+		if self.debug: print('Running get_scan task.')
+
 		# let the games begin
 		if self.debug: print('starting %s' % url)
 
@@ -419,9 +428,10 @@ class ChromeDriver:
 		#	for internal processes and not returned
 		dom_storage_holder 	= {}
 		
-		# Before we return the result we store the unique domstorage items to a
-		#	list of dicts
-		dom_storage = []
+		# "misc_storage" includes local storage, session storage, indexeddb,
+		#	and cachestorage.  we can expand this as needed.  each item is
+		#	a dict with pertinent details.
+		misc_storage = []
 
 		# We merge the following types of websocket events
 		websocket_event_types = [
@@ -509,6 +519,16 @@ class ChromeDriver:
 				response = response['result']
 			if self.debug: print(f'ws response: {response}')
 
+			if self.debug: print('going to enable IndexedDB logging')
+			response = self.get_single_ws_response('IndexedDB.enable')
+			if response['success'] == False:
+				self.exit()
+				return response
+			else:
+				response = response['result']
+			if self.debug: print(f'ws response: {response}')
+
+
 			if self.debug: print('going to disable cache')
 			response = self.get_single_ws_response('Network.setCacheDisabled','"cacheDisabled":true')
 			if response['success'] == False:
@@ -518,19 +538,7 @@ class ChromeDriver:
 				response = response['result']
 			if self.debug: print(f'ws response: {response}')
 
-		# start the page load process, fail gracefully, currently using
-		#	selenium b/c it gives us a timeout, but may move to devtools
-		if self.debug: print(f'going to load {url}')
-		# try:
-		# 	self.driver.get(url)
-		# except Exception as e:
-		# 	# close browser/websocket
-		# 	self.exit()
-		# 	# return the error
-		# 	return ({
-		# 		'success': False,
-		# 		'result': str(e)
-		# 	})
+		# start the page load process, fail gracefully
 		response = self.get_single_ws_response('Page.navigate','"url":"%s"' % url)
 		if response['success'] == False:
 			self.exit()
@@ -781,9 +789,21 @@ class ChromeDriver:
 				self.exit()
 				return response
 
-		if self.debug: print('###########################################')
-		if self.debug: print(' Going to send devtools websocket commands ')
-		if self.debug: print('###########################################')
+		# to get IndexedDB entries we need to call them based on
+		#	the securityOrigin of the frame, so we need to get
+		#	the frame tree first
+		response = self.send_ws_command('Page.getFrameTree')
+		if response['success'] == False:
+			self.exit()
+			return response
+		else: 
+			ws_id = response['result']
+		
+		pending_ws_id_to_cmd[ws_id] = 'frame_tree'
+
+		if self.debug: print('############################################')
+		if self.debug: print(' Going to send devtools javascript commands ')
+		if self.debug: print('############################################')
 
 		# send the ws commands to get above data
 		response = self.send_ws_command('Page.getNavigationHistory')
@@ -1059,6 +1079,87 @@ class ChromeDriver:
 						page_text 			= None
 						readability_html 	= None
 
+				# traverse the frame tree to get all possible securityOrigins
+				#	then, issue commands to the IndexedDB and CacheStorage APIs to get the
+				#	object names.  at some point we may want the object contents
+				#	as well, but that introduces non-trivial complexity and currently
+				#	there is not a pressing need.
+				elif cmd == 'frame_tree':
+
+					# make sure we only do things once
+					security_origins = set()
+
+					# keep track of what ws_id goes to which origin for indexeddb
+					pending_ws_id_to_idx_db_sec_origin = {}
+
+					# traverse the frame tree
+					security_origins.add(devtools_response['result']['frameTree']['frame']['securityOrigin'])
+					if 'childFrames' in devtools_response['result']['frameTree']:
+						for item in devtools_response['result']['frameTree']['childFrames']:
+							if item['frame']['securityOrigin'] != '://':
+								security_origins.add(item['frame']['securityOrigin'])
+
+					# issue our devtools commands
+					for security_origin in security_origins:
+
+						# first get the IndexedDB, note we need to double-key this to the sec origin
+						response = self.send_ws_command('IndexedDB.requestDatabaseNames',f'"securityOrigin":"{security_origin}"')
+						if response['success'] == False:
+							self.exit()
+							return response
+						else: 
+							sub_ws_id = response['result']
+						
+						pending_ws_id_to_cmd[sub_ws_id] = 'idx_db_list'
+						pending_ws_id_to_idx_db_sec_origin[sub_ws_id] = security_origin
+
+						# now get the CacheStorage
+						response = self.send_ws_command('CacheStorage.requestCacheNames',f'"securityOrigin":"{security_origin}"')
+						if response['success'] == False:
+							self.exit()
+							return response
+						else: 
+							sub_ws_id = response['result']
+						
+						pending_ws_id_to_cmd[sub_ws_id] = 'cache_name_list'
+					
+
+				# we have the result of our indexeddb database names 
+				#	API call, package it up to send back
+				elif cmd == 'idx_db_list':
+					try:
+						# skip any that are empty
+						if len(devtools_response['result']['databaseNames']) != 0:
+							for db_name in devtools_response['result']['databaseNames']:
+								misc_storage.append({
+									'security_origin'	: pending_ws_id_to_idx_db_sec_origin[ws_id],
+									'key'				: db_name,
+									'type'				: 'indexeddb',
+									'value'				: None
+								})
+					except:
+						# it appears this can fail, my suspicion is that a frame can dissapear 
+						#	before we are able to query it.  since it is a minor issue, just
+						#	print warning if in debug, but otherwise ignore
+						if self.debug: print('Unable to get databaseNames via Devtools',devtools_response)
+
+				# we have the result of our cachestorage 
+				#	API call, package it up to send back
+				elif cmd == 'cache_name_list':
+					try:
+						for cache in devtools_response['result']['caches']:
+							misc_storage.append({
+								'type'				: 'cache_storage',
+								'security_origin'	: cache['securityOrigin'],
+								'key'				: cache['cacheName'],
+								'value'				: None
+							})
+					except:
+						# it appears this can fail, my suspicion is that a frame can dissapear 
+						#	before we are able to query it.  since it is a minor issue, just
+						#	print warning if in debug, but otherwise ignore
+						if self.debug: print('Unable to get cacheName via Devtools',devtools_response)
+
 			# we've gotten all the reponses we need, break
 			if len(pending_ws_id_to_cmd) == 0: 
 				if self.debug: print('Got all ws responses!')
@@ -1122,9 +1223,14 @@ class ChromeDriver:
 		if not get_text_only:
 			if self.debug: print('Fixing domstorage')
 			for ds_key in dom_storage_holder:
-				dom_storage.append({
+				if ds_key[1]:
+					misc_storage_type = 'local_storage'
+				else:
+					misc_storage_type = 'session_storage'
+
+				misc_storage.append({
 					'security_origin'	: ds_key[0],
-					'is_local_storage'	: ds_key[1],
+					'type'				: misc_storage_type,
 					'key'				: ds_key[2],
 					'value'				: dom_storage_holder[ds_key]
 				})
@@ -1224,7 +1330,7 @@ class ChromeDriver:
 			'event_source_msgs'		: event_source_msgs,
 			'response_bodies'		: response_bodies,
 			'cookies'				: cookies,
-			'dom_storage'			: dom_storage,
+			'misc_storage'			: misc_storage,
 			'page_source'			: page_source,
 			'page_text'				: page_text,
 			'readability_html'		: readability_html,

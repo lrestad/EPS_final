@@ -30,7 +30,7 @@
 -- 	store_source BOOLEAN,
 -- 	store_page_text BOOLEAN,
 -- 	store_links BOOLEAN,
--- 	store_dom_storage BOOLEAN,
+-- 	store_misc_storage BOOLEAN,
 -- 	store_responses BOOLEAN,
 -- 	store_request_xtra_headers BOOLEAN,
 -- 	store_response_xtra_headers BOOLEAN,
@@ -43,7 +43,7 @@
 -- 	timeseries_enabled BOOLEAN,
 -- 	timeseries_interval BIGINT
 -- );
-CREATE TABLE config(client_browser_type TEXT,client_prewait BIGINT,client_no_event_wait BIGINT,client_max_wait BIGINT,client_get_bodies BOOLEAN,client_get_bodies_b64 BOOLEAN,client_get_screen_shot BOOLEAN,client_get_text BOOLEAN,client_crawl_depth BIGINT,client_crawl_retries BIGINT,client_page_load_strategy TEXT,client_reject_redirects BOOLEAN,client_min_internal_links BIGINT,max_attempts BIGINT,modified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,queue_results_only BOOLEAN,store_1p BOOLEAN,store_base64 BOOLEAN,store_files BOOLEAN,store_screen_shot BOOLEAN,store_source BOOLEAN,store_page_text BOOLEAN,store_links BOOLEAN,store_dom_storage BOOLEAN,store_responses BOOLEAN,store_request_xtra_headers BOOLEAN,store_response_xtra_headers BOOLEAN,store_requests BOOLEAN,store_websockets BOOLEAN,store_websocket_events BOOLEAN,store_event_source_msgs BOOLEAN,store_cookies BOOLEAN,store_security_details BOOLEAN,timeseries_enabled BOOLEAN,timeseries_interval BIGINT);
+CREATE TABLE config(client_browser_type TEXT,client_prewait BIGINT,client_no_event_wait BIGINT,client_max_wait BIGINT,client_get_bodies BOOLEAN,client_get_bodies_b64 BOOLEAN,client_get_screen_shot BOOLEAN,client_get_text BOOLEAN,client_crawl_depth BIGINT,client_crawl_retries BIGINT,client_page_load_strategy TEXT,client_reject_redirects BOOLEAN,client_min_internal_links BIGINT,max_attempts BIGINT,modified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,queue_results_only BOOLEAN,store_1p BOOLEAN,store_base64 BOOLEAN,store_files BOOLEAN,store_screen_shot BOOLEAN,store_source BOOLEAN,store_page_text BOOLEAN,store_links BOOLEAN,store_misc_storage BOOLEAN,store_responses BOOLEAN,store_request_xtra_headers BOOLEAN,store_response_xtra_headers BOOLEAN,store_requests BOOLEAN,store_websockets BOOLEAN,store_websocket_events BOOLEAN,store_event_source_msgs BOOLEAN,store_cookies BOOLEAN,store_security_details BOOLEAN,timeseries_enabled BOOLEAN,timeseries_interval BIGINT);
 ------------------
 --- TASK_QUEUE ---
 ------------------
@@ -361,19 +361,19 @@ CREATE TABLE event_source_msg(id INTEGER PRIMARY KEY,page_id BIGINT REFERENCES p
 -- );
 CREATE TABLE cookie(id INTEGER PRIMARY KEY,page_id BIGINT REFERENCES page(id) ON DELETE CASCADE,domain_id BIGINT REFERENCES domain(id),domain TEXT,expires_text TEXT,expires_timestamp TIMESTAMPTZ,http_only BOOLEAN,is_3p BOOLEAN,is_1p_3p BOOLEAN,name TEXT,path TEXT,same_site TEXT,secure BOOLEAN,session BOOLEAN,size BIGINT,value TEXT,is_set_by_response BOOLEAN);
 -------------------
---- DOM_STORAGE ---
+--- misc_storage ---
 -------------------
--- CREATE TABLE dom_storage(
+-- CREATE TABLE misc_storage(
 -- 	id INTEGER PRIMARY KEY,
 -- 	page_id BIGINT REFERENCES page(id) ON DELETE CASCADE,
 -- 	domain_id BIGINT REFERENCES domain(id),
 -- 	security_origin TEXT,
--- 	is_local_storage BOOLEAN,
+-- 	type TEXT,
 -- 	key TEXT,
 -- 	value TEXT,
 -- 	is_3p BOOLEAN
 -- );
-CREATE TABLE dom_storage(id INTEGER PRIMARY KEY,page_id BIGINT REFERENCES page(id) ON DELETE CASCADE,domain_id BIGINT REFERENCES domain(id),security_origin TEXT,is_local_storage BOOLEAN,key TEXT,value TEXT,is_3p BOOLEAN);
+CREATE TABLE misc_storage(id INTEGER PRIMARY KEY,page_id BIGINT REFERENCES page(id) ON DELETE CASCADE,domain_id BIGINT REFERENCES domain(id),security_origin TEXT,type TEXT,key TEXT,value TEXT,is_3p BOOLEAN);
 -------------
 --- ERROR ---
 -------------
