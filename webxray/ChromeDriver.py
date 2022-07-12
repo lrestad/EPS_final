@@ -65,6 +65,8 @@ class ChromeDriver:
 				chrome_cmd = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome '
 			elif platform.system() == 'Linux':
 				chrome_cmd = '/usr/bin/google-chrome '
+				# make sure chrome doesnt' access for keychain password
+				chrome_cmd += ' --password-store=basic '
 			elif platform.system() == 'Windows':
 				chrome_cmd = 'start chrome '
 			else:
