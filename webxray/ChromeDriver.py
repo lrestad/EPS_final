@@ -1,4 +1,3 @@
-# 2020012 - retrying this, seems to work well, marginal decrease in captured stuff, better speed
 import datetime
 import json
 import os
@@ -54,6 +53,9 @@ class ChromeDriver:
 		self.browser_type		= None
 		self.browser_version 	= None
 		self.user_agent			= None
+
+		# list of files in ./injections we want to execute
+		self.injections			= config['client_injections']
 
 		# we can override the path here
 		if chrome_path:
@@ -530,7 +532,6 @@ class ChromeDriver:
 				response = response['result']
 			if self.debug: print(f'ws response: {response}')
 
-
 			if self.debug: print('going to disable cache')
 			response = self.get_single_ws_response('Network.setCacheDisabled','"cacheDisabled":true')
 			if response['success'] == False:
@@ -540,14 +541,19 @@ class ChromeDriver:
 				response = response['result']
 			if self.debug: print(f'ws response: {response}')
 
-		# start the page load process, fail gracefully
-		response = self.get_single_ws_response('Page.navigate','"url":"%s"' % url)
-		if response['success'] == False:
-			self.exit()
-			return response
-		else:
-			response = response['result']
-		if self.debug: print(f'ws response: {response}')
+		# keep track of any/all websocket ids for
+		#	injected scripts
+		injection_ws_ids 	= []
+
+		# this is how we link the result back to the calling script
+		ws_id_to_script 	= {}
+
+		# keep results here to return, holds dicts
+		injection_results 	=  []
+
+		# we only want to inject the js once
+		sent_injections 	= False
+		received_injections = False
 
 		# this is the main loop where we get network log data
 		if not get_text_only:
@@ -574,10 +580,18 @@ class ChromeDriver:
 			# 	changes (eg 1.99 -> 2.10 = 1 -> 2)
 			last_second = 0
 
+			# make sure we don't do this more than once
+			sent_intial_request = False
+
 			# We keep collecting devtools_responses in this loop until either we haven't seen 
 			#	network activity for the no_event_wait value or we exceed the max_wait
 			#	time.
 			while True:
+
+				# start page load
+				if not sent_intial_request: 
+					self.send_ws_command('Page.navigate','"url":"%s"' % url)
+					sent_intial_request = True
 
 				# update how long we've been going
 				loop_elapsed = (datetime.datetime.now()-response_loop_start).total_seconds()
@@ -592,12 +606,48 @@ class ChromeDriver:
 
 				# see if time to stop
 				elapsed_no_event = (datetime.datetime.now()-time_since_last_response).total_seconds()
+				
 				if loop_elapsed < self.prewait:
 					if self.debug: print(f'{loop_elapsed}: In prewait period')
 
 				if loop_elapsed > self.prewait and (elapsed_no_event > self.no_event_wait or loop_elapsed > self.max_wait):
 					if self.debug: print(f'{loop_elapsed} No event for {elapsed_no_event}, max_wait is {self.max_wait}, breaking Network log loop.')
 					break
+
+				# wait 3 seconds and inject scripts
+				if self.injections and not sent_injections and loop_elapsed > 3:
+					if self.debug: print('### JAVASCRIPT INJECTION TIME ###')
+
+					for injection in self.injections:
+						if self.debug: print(f'injecting {injection}.js')
+						try:
+							js = json.dumps(open(f'./injections/{injection}', 'r', encoding='utf-8').read())
+						except:
+							self.exit()
+							return ({
+								'success'	: False,
+								'result'	: f'Unable to inject {injection}, does the file exist?'
+							})
+
+						# don't get return value for load_ scripts
+						if injection[:5] == 'load_':
+							response = self.send_ws_command('Runtime.evaluate',params=f'"expression":{js},"timeout":1000,"returnByValue":false')
+						else:
+							response = self.send_ws_command('Runtime.evaluate',params=f'"expression":{js},"timeout":1000,"returnByValue":true')
+						
+						if response['success'] == False:
+							self.exit()
+							return response
+						else: 
+							# store the ws_id if we need a response, otherwise
+							#	it executes and we don't bother w/response
+							if injection[:5] != 'load_':
+								ws_id = response['result']
+								injection_ws_ids.append(ws_id)
+								ws_id_to_script[ws_id] = injection
+
+					# don't do this again
+					sent_injections = True
 
 				# try to get ws response, returns None if no response
 				devtools_response = self.get_next_ws_response()
@@ -606,6 +656,25 @@ class ChromeDriver:
 				#	a Network event, if we didn't get a response we wait
 				#	for a second
 				if devtools_response:
+					
+					# check if we have a response for our injected js
+					if 'id' in devtools_response:
+						ws_id = devtools_response['id']
+
+						if ws_id in injection_ws_ids:
+							# if result is a string this will make it pretty, otherwise just dump the 
+							#	raw ouutput
+							try:
+								injection_results.append({
+									'script_name'	: ws_id_to_script[ws_id],
+									'result'		: json.dumps(devtools_response['result']['result']['value'])
+									})
+							except:
+								injection_results.append({
+									'script_name'	: ws_id_to_script[ws_id],
+									'result'		: json.dumps(devtools_response['result']['result'])
+									})
+
 					if 'method' in devtools_response:
 						if 'Network' in devtools_response['method']:
 							time_since_last_response = datetime.datetime.now()
@@ -834,21 +903,7 @@ class ChromeDriver:
 		pending_ws_id_to_cmd[ws_id] = 'html_lang'
 
 		# LINKS
-		js = json.dumps("""
-			var wbxr_links = (function () {
-				var wbxr_processed_links = [];
-				var wbxr_links 			 = document.links;
-				for (var wbxr_i = 0; wbxr_i < wbxr_links.length; wbxr_i++) {
-					wbxr_processed_links.push({
-						'text'		: wbxr_links[wbxr_i]['innerText'],
-						'href'		: wbxr_links[wbxr_i]['href'],
-						'protocol'	: wbxr_links[wbxr_i]['protocol']
-					});
-				}
-				return (wbxr_processed_links);
-			}());
-			wbxr_links;
-		""")
+		js = json.dumps(open('./injections/wbxr_links.js', 'r', encoding='utf-8').read())
 		response = self.send_ws_command('Runtime.evaluate',params=f'"expression":{js},"timeout":1000,"returnByValue":true')
 		if response['success'] == False:
 			self.exit()
@@ -938,9 +993,6 @@ class ChromeDriver:
 			ws_id = response['result']
 		pending_ws_id_to_cmd[ws_id] = 'cookies'
 
-		# Keep track of how long we've been reading ws data
-		response_loop_start = datetime.datetime.now()
-
 		# just to let us know how much work to do
 		if self.debug: print('Pending ws requests: %s %s' % (url, len(pending_ws_id_to_cmd)))
 
@@ -968,7 +1020,7 @@ class ChromeDriver:
 					'result': 'Timeout when processing devtools responses.'
 				})
 			
-			if self.debug: print(loop_elapsed,json.dumps(devtools_response)[:100])
+			if self.debug: print(loop_elapsed,json.dumps(devtools_response)[:250])
 
 			# if response has an 'id' see which of our commands it goes to
 			if 'id' in devtools_response:
@@ -1337,9 +1389,10 @@ class ChromeDriver:
 			'page_text'				: page_text,
 			'readability_html'		: readability_html,
 			'screen_shot'			: screen_shot,
-			'page_load_strategy'	: self.page_load_strategy
+			'page_load_strategy'	: self.page_load_strategy,
+			'injection_results'		: injection_results
 		}
-		
+
 		# Close browser and websocket connection, if doing a crawl
 		#	this happens in get_crawl_traffic
 		if self.is_crawl == False: self.exit()

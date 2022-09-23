@@ -844,6 +844,11 @@ class OutputStore:
 				if cookie['is_3p']:
 					page_3p_cookie_domains.add((domain_info['result']['domain'],domain_info['result']['domain_owner_id']))
 
+		# INJECTION RESULTS
+		for injection_result in browser_output['injection_results']:
+			injection_result['page_id'] = page_id
+			self.sql_driver.add_injection(injection_result)
+
 		if self.debug: print('done storing scan %s' % browser_output['start_url'])
 		return {
 			'success'						: True,

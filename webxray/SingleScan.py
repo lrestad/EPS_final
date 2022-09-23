@@ -152,5 +152,12 @@ class SingleScan:
 				print('\t%s) %s [%s]' % (count, domain, lineage[:-3]))
 			else:
 				print('\t%s) %s [Unknown Owner]' % (count, domain))
+
+		if len(browser_output['injection_results']) != 0:
+			print('\n\t------------------{ Injection Results }------------------')
+			for injection in browser_output['injection_results']:
+				print(f"\t{injection['script_name']}")
+				print(f"\t\t{injection['result']}")
+
 	# end execute
 # end SingleScan
