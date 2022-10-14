@@ -99,6 +99,8 @@ class SingleScan:
 		print('\t %s' % origin_domain)
 		print('\n\t------------------{ Seconds to Complete Download }------------------')
 		print('\t%s' % (browser_output['load_time']))
+		print('\n\t------------------{ Incognito Mode Status }------------------')
+		print('\t%s' % (browser_output['browser_incognito']))
 		print('\n\t------------------{ Cookies }------------------')
 		# put relevant fields from cookies into list we can sort
 		cookie_list = []

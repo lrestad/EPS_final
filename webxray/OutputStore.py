@@ -278,6 +278,7 @@ class OutputStore:
 			'browser_no_event_wait'	: browser_output['no_event_wait'],
 			'browser_max_wait'		: browser_output['max_wait'],
 			'page_load_strategy'	: browser_output['page_load_strategy'],
+			'browser_incognito'		: browser_output['browser_incognito'],
 			'title'					: browser_output['title'],
 			'meta_desc'				: browser_output['meta_desc'],
 			'lang'					: browser_output['lang'],

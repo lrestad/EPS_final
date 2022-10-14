@@ -26,7 +26,7 @@ class PostgreSQLDriver:
 		"""
 
 		# modify this per your install
-		self.db_user = 'timlibert'
+		self.db_user = ''
 		self.db_pass = ''
 		self.db_host = 'localhost'
 		self.db_port = '5432'
@@ -223,7 +223,7 @@ class PostgreSQLDriver:
 			field "modified" and we always use the most recent config, but can also
 			see any changes made.
 		"""
-
+		print(config)
 		self.db.execute("""
 			INSERT INTO config (
 				client_browser_type,
@@ -240,6 +240,7 @@ class PostgreSQLDriver:
 				client_reject_redirects,
 				client_min_internal_links,
 				client_injections,
+				client_incognito,
 				max_attempts,
 				store_1p,
 				store_base64,
@@ -294,6 +295,7 @@ class PostgreSQLDriver:
 				%s,
 				%s,
 				%s,
+				%s,
 				%s
 			)
 		""", (
@@ -311,6 +313,7 @@ class PostgreSQLDriver:
 			config['client_reject_redirects'],
 			config['client_min_internal_links'],
 			json.dumps(config['client_injections']),
+			config['client_incognito'],
 			config['max_attempts'],
 			config['store_1p'],
 			config['store_base64'],
@@ -358,6 +361,7 @@ class PostgreSQLDriver:
 				client_reject_redirects,
 				client_min_internal_links,
 				client_injections,
+				client_incognito,
 				max_attempts,
 				store_1p,
 				store_base64,
@@ -403,26 +407,27 @@ class PostgreSQLDriver:
 			'client_reject_redirects'		: result[11],
 			'client_min_internal_links'		: result[12],
 			'client_injections'				: json.loads(result[13]),
-			'max_attempts'					: result[14],
-			'store_1p'						: result[15],
-			'store_base64'					: result[16],
-			'store_files'					: result[17],
-			'store_screen_shot'				: result[18],
-			'store_source'					: result[19],
-			'store_page_text'				: result[20],
-			'store_links'					: result[21],
-			'store_misc_storage'			: result[22],
-			'store_responses'				: result[23],
-			'store_request_xtra_headers'	: result[24],
-			'store_response_xtra_headers'	: result[25],
-			'store_requests'				: result[26],
-			'store_websockets'				: result[27],
-			'store_websocket_events'		: result[28],
-			'store_event_source_msgs'		: result[29],
-			'store_cookies'					: result[30],
-			'store_security_details'		: result[31],
-			'timeseries_enabled'			: result[32],
-			'timeseries_interval'			: result[33]
+			'client_incognito'				: result[14],
+			'max_attempts'					: result[15],
+			'store_1p'						: result[16],
+			'store_base64'					: result[17],
+			'store_files'					: result[18],
+			'store_screen_shot'				: result[19],
+			'store_source'					: result[21],
+			'store_page_text'				: result[21],
+			'store_links'					: result[22],
+			'store_misc_storage'			: result[23],
+			'store_responses'				: result[24],
+			'store_request_xtra_headers'	: result[25],
+			'store_response_xtra_headers'	: result[26],
+			'store_requests'				: result[27],
+			'store_websockets'				: result[28],
+			'store_websocket_events'		: result[29],
+			'store_event_source_msgs'		: result[30],
+			'store_cookies'					: result[31],
+			'store_security_details'		: result[32],
+			'timeseries_enabled'			: result[33],
+			'timeseries_interval'			: result[34]
 		}
 	# get_config
 
@@ -1058,6 +1063,7 @@ class PostgreSQLDriver:
 				browser_no_event_wait,
 				browser_max_wait,
 				page_load_strategy,
+				browser_incognito,
 				title, 
 				meta_desc, 
 				lang, 
@@ -1085,6 +1091,7 @@ class PostgreSQLDriver:
 		) VALUES (
 				%s, 
 				%s, 
+				%s,
 				%s,
 				%s,
 				%s,
@@ -1120,6 +1127,7 @@ class PostgreSQLDriver:
 			page['browser_no_event_wait'],
 			page['browser_max_wait'],
 			page['page_load_strategy'],
+			page['browser_incognito'],
 			page['title'], 
 			page['meta_desc'], 
 			page['lang'], 

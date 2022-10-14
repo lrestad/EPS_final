@@ -39,6 +39,7 @@ class ChromeDriver:
 		self.crawl_retries 			= config['client_crawl_retries']
 		self.page_load_strategy		= config['client_page_load_strategy']
 		self.min_internal_links		= config['client_min_internal_links']
+		self.incognito				= config['client_incognito']
 		self.headless 				= headless
 
 		# custom library in /webxray
@@ -90,8 +91,11 @@ class ChromeDriver:
 		# not sure this really does anything
 		chrome_cmd += ' --disable-gpu'
 
+		# no execution path for this now, but maybe in the future?
+		if self.incognito: chrome_cmd += ' --incognito'
+
 		# set up headless
-		if self.headless: chrome_cmd += ' --headless'
+		if self.headless: 	chrome_cmd += ' --headless'
 
 		# if we're in production send the subprocess output to dev/null, None is normal
 		if not self.debug:
@@ -1390,7 +1394,8 @@ class ChromeDriver:
 			'readability_html'		: readability_html,
 			'screen_shot'			: screen_shot,
 			'page_load_strategy'	: self.page_load_strategy,
-			'injection_results'		: injection_results
+			'injection_results'		: injection_results,
+			'browser_incognito'		: self.incognito
 		}
 
 		# Close browser and websocket connection, if doing a crawl

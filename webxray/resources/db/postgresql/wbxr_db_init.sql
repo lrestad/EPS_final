@@ -23,6 +23,7 @@ CREATE EXTENSION pg_trgm;
 -- 	client_reject_redirects BOOLEAN,
 -- 	client_min_internal_links BIGINT,
 --	client_injections TEXT,
+--	client_incognito BOOLEAN,
 -- 	max_attempts BIGINT,
 -- 	modified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 -- 	store_1p BOOLEAN,
@@ -45,7 +46,7 @@ CREATE EXTENSION pg_trgm;
 -- 	timeseries_enabled BOOLEAN,
 -- 	timeseries_interval BIGINT
 -- );
-CREATE TABLE config(client_browser_type TEXT,client_prewait BIGINT,client_no_event_wait BIGINT,client_max_wait BIGINT,client_get_bodies BOOLEAN,client_get_bodies_b64 BOOLEAN,client_get_screen_shot BOOLEAN,client_get_text BOOLEAN,client_crawl_depth BIGINT,client_crawl_retries BIGINT,client_page_load_strategy TEXT,client_reject_redirects BOOLEAN,client_min_internal_links BIGINT,client_injections TEXT,max_attempts BIGINT,modified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,store_1p BOOLEAN,store_base64 BOOLEAN,store_files BOOLEAN,store_screen_shot BOOLEAN,store_source BOOLEAN,store_page_text BOOLEAN,store_links BOOLEAN,store_misc_storage BOOLEAN,store_responses BOOLEAN,store_request_xtra_headers BOOLEAN,store_response_xtra_headers BOOLEAN,store_requests BOOLEAN,store_websockets BOOLEAN,store_websocket_events BOOLEAN,store_event_source_msgs BOOLEAN,store_cookies BOOLEAN,store_security_details BOOLEAN,timeseries_enabled BOOLEAN,timeseries_interval BIGINT);
+CREATE TABLE config(client_browser_type TEXT,client_prewait BIGINT,client_no_event_wait BIGINT,client_max_wait BIGINT,client_get_bodies BOOLEAN,client_get_bodies_b64 BOOLEAN,client_get_screen_shot BOOLEAN,client_get_text BOOLEAN,client_crawl_depth BIGINT,client_crawl_retries BIGINT,client_page_load_strategy TEXT,client_reject_redirects BOOLEAN,client_min_internal_links BIGINT,client_injections TEXT,client_incognito BOOLEAN,max_attempts BIGINT,modified TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,store_1p BOOLEAN,store_base64 BOOLEAN,store_files BOOLEAN,store_screen_shot BOOLEAN,store_source BOOLEAN,store_page_text BOOLEAN,store_links BOOLEAN,store_misc_storage BOOLEAN,store_responses BOOLEAN,store_request_xtra_headers BOOLEAN,store_response_xtra_headers BOOLEAN,store_requests BOOLEAN,store_websockets BOOLEAN,store_websocket_events BOOLEAN,store_event_source_msgs BOOLEAN,store_cookies BOOLEAN,store_security_details BOOLEAN,timeseries_enabled BOOLEAN,timeseries_interval BIGINT);
 ------------------
 --- TASK_QUEUE ---
 ------------------
@@ -146,6 +147,7 @@ CREATE INDEX index_page_text 					ON page_text USING GIN(text gin_trgm_ops);
 -- 	browser_prewait BIGINT,
 -- 	browser_no_event_wait BIGINT,
 -- 	browser_max_wait BIGINT,
+-- 	browser_incognito BOOLEAN,
 -- 	page_load_strategy TEXT,
 -- 	title TEXT,
 -- 	meta_desc TEXT,
@@ -168,7 +170,7 @@ CREATE INDEX index_page_text 					ON page_text USING GIN(text gin_trgm_ops);
 -- 	stored TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 -- 	UNIQUE (accessed, start_url_md5)
 -- );
-CREATE TABLE page(id BIGSERIAL PRIMARY KEY,crawl_id TEXT,crawl_timestamp TIMESTAMPTZ,crawl_sequence BIGINT,client_id TEXT,client_timezone TEXT,client_ip TEXT,browser_type TEXT,browser_version TEXT,browser_prewait BIGINT,browser_no_event_wait BIGINT,browser_max_wait BIGINT,page_load_strategy TEXT,title TEXT,meta_desc TEXT,lang TEXT,start_url_md5 TEXT,start_url TEXT,start_url_domain_id BIGINT REFERENCES domain(id),final_url_md5 TEXT,final_url TEXT,final_url_domain_id BIGINT REFERENCES domain(id),page_domain_redirect BOOLEAN,is_ssl BOOLEAN,link_count_internal BIGINT,link_count_external BIGINT,load_time NUMERIC,page_text_id BIGINT,page_source_md5 TEXT,screen_shot_md5 TEXT,accessed TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,stored TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,UNIQUE (accessed, start_url_md5));
+CREATE TABLE page(id BIGSERIAL PRIMARY KEY,crawl_id TEXT,crawl_timestamp TIMESTAMPTZ,crawl_sequence BIGINT,client_id TEXT,client_timezone TEXT,client_ip TEXT,browser_type TEXT,browser_version TEXT,browser_prewait BIGINT,browser_no_event_wait BIGINT,browser_max_wait BIGINT,browser_incognito BOOLEAN,page_load_strategy TEXT,title TEXT,meta_desc TEXT,lang TEXT,start_url_md5 TEXT,start_url TEXT,start_url_domain_id BIGINT REFERENCES domain(id),final_url_md5 TEXT,final_url TEXT,final_url_domain_id BIGINT REFERENCES domain(id),page_domain_redirect BOOLEAN,is_ssl BOOLEAN,link_count_internal BIGINT,link_count_external BIGINT,load_time NUMERIC,page_text_id BIGINT,page_source_md5 TEXT,screen_shot_md5 TEXT,accessed TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,stored TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,UNIQUE (accessed, start_url_md5));
 CREATE INDEX index_page_crawl_id 				ON page(crawl_id);
 -- CREATE INDEX index_page_client_id 				ON page(client_id);
 -- CREATE INDEX index_page_client_ip 				ON page(client_ip);
