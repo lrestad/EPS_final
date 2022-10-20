@@ -84,9 +84,9 @@ class Utilities:
 		if config_type == 'haystack':
 			return {
 				'client_browser_type'			: 'chrome',
-				'client_prewait'				: 5,
-				'client_no_event_wait'			: 6,
-				'client_max_wait'				: 7,
+				'client_prewait'				: 10,
+				'client_no_event_wait'			: 20,
+				'client_max_wait'				: 60,
 				'client_get_bodies'				: False,
 				'client_get_bodies_b64'			: False,
 				'client_get_screen_shot'		: False,
