@@ -223,7 +223,6 @@ class PostgreSQLDriver:
 			field "modified" and we always use the most recent config, but can also
 			see any changes made.
 		"""
-		print(config)
 		self.db.execute("""
 			INSERT INTO config (
 				client_browser_type,

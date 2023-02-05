@@ -502,48 +502,47 @@ class ChromeDriver:
 			if self.debug: print(f'ws response: {response}')	
 
 		# enable network and domstorage when doing a network_log
-		if not get_text_only:
-			if self.debug: print('going to enable network logging')
-			response = self.get_single_ws_response('Network.enable')
-			if response['success'] == False:
-				self.exit()
-				return response
-			elif 'result' not in response['result']:
-				self.exit()
-				return ({
-					'success': False,
-					'result': 'No result for ws command'
-				})
-			else:
-				response = response['result']
-			if self.debug: print(f'ws response: {response}')
+		if self.debug: print('going to enable network logging')
+		response = self.get_single_ws_response('Network.enable')
+		if response['success'] == False:
+			self.exit()
+			return response
+		elif 'result' not in response['result']:
+			self.exit()
+			return ({
+				'success': False,
+				'result': 'No result for ws command'
+			})
+		else:
+			response = response['result']
+		if self.debug: print(f'ws response: {response}')
 
-			if self.debug: print('going to enable domstorage logging')
-			response = self.get_single_ws_response('DOMStorage.enable')
-			if response['success'] == False:
-				self.exit()
-				return response
-			else:
-				response = response['result']
-			if self.debug: print(f'ws response: {response}')
+		if self.debug: print('going to enable domstorage logging')
+		response = self.get_single_ws_response('DOMStorage.enable')
+		if response['success'] == False:
+			self.exit()
+			return response
+		else:
+			response = response['result']
+		if self.debug: print(f'ws response: {response}')
 
-			if self.debug: print('going to enable IndexedDB logging')
-			response = self.get_single_ws_response('IndexedDB.enable')
-			if response['success'] == False:
-				self.exit()
-				return response
-			else:
-				response = response['result']
-			if self.debug: print(f'ws response: {response}')
+		if self.debug: print('going to enable IndexedDB logging')
+		response = self.get_single_ws_response('IndexedDB.enable')
+		if response['success'] == False:
+			self.exit()
+			return response
+		else:
+			response = response['result']
+		if self.debug: print(f'ws response: {response}')
 
-			if self.debug: print('going to disable cache')
-			response = self.get_single_ws_response('Network.setCacheDisabled','"cacheDisabled":true')
-			if response['success'] == False:
-				self.exit()
-				return response
-			else:
-				response = response['result']
-			if self.debug: print(f'ws response: {response}')
+		if self.debug: print('going to disable cache')
+		response = self.get_single_ws_response('Network.setCacheDisabled','"cacheDisabled":true')
+		if response['success'] == False:
+			self.exit()
+			return response
+		else:
+			response = response['result']
+		if self.debug: print(f'ws response: {response}')
 
 		# keep track of any/all websocket ids for
 		#	injected scripts
@@ -560,309 +559,301 @@ class ChromeDriver:
 		received_injections = False
 
 		# this is the main loop where we get network log data
-		if not get_text_only:
+		#############################
+		# DEVTOOLS NETWORK LOG DATA #
+		#############################
 
-			#############################
-			# DEVTOOLS NETWORK LOG DATA #
-			#############################
+		if self.debug: print('##############################')
+		if self.debug: print(' Going to process Network Log ')
+		if self.debug: print('##############################')
 
-			if self.debug: print('##############################')
-			if self.debug: print(' Going to process Network Log ')
-			if self.debug: print('##############################')
+		# Keep track of how long we've been reading ws data
+		response_loop_start = datetime.datetime.now()
 
-			# Keep track of how long we've been reading ws data
-			response_loop_start = datetime.datetime.now()
+		# Keetp track of when we last saw a Network event
+		time_since_last_response = datetime.datetime.now()
 
-			# Keetp track of when we last saw a Network event
-			time_since_last_response = datetime.datetime.now()
+		# Length of time since we last saw a Network event
+		elapsed_no_event = 0
 
-			# Length of time since we last saw a Network event
-			elapsed_no_event = 0
+		# Keep track of what second we are on so we know
+		#	when to scroll, is incremented whenever the second
+		# 	changes (eg 1.99 -> 2.10 = 1 -> 2)
+		last_second = 0
 
-			# Keep track of what second we are on so we know
-			#	when to scroll, is incremented whenever the second
-			# 	changes (eg 1.99 -> 2.10 = 1 -> 2)
-			last_second = 0
+		# make sure we don't do this more than once
+		sent_intial_request = False
 
-			# make sure we don't do this more than once
-			sent_intial_request = False
+		# We keep collecting devtools_responses in this loop until either we haven't seen 
+		#	network activity for the no_event_wait value or we exceed the max_wait
+		#	time.
+		while True:
 
-			# We keep collecting devtools_responses in this loop until either we haven't seen 
-			#	network activity for the no_event_wait value or we exceed the max_wait
-			#	time.
-			while True:
+			# start page load
+			if not sent_intial_request: 
+				self.send_ws_command('Page.navigate','"url":"%s"' % url)
+				sent_intial_request = True
 
-				# start page load
-				if not sent_intial_request: 
-					self.send_ws_command('Page.navigate','"url":"%s"' % url)
-					sent_intial_request = True
+			# update how long we've been going
+			loop_elapsed = (datetime.datetime.now()-response_loop_start).total_seconds()
 
-				# update how long we've been going
-				loop_elapsed = (datetime.datetime.now()-response_loop_start).total_seconds()
+			# perform two scrolls once a second
+			if int(loop_elapsed) > last_second:
+				last_second = int(loop_elapsed)
+				for i in range(0,10):
+					if self.debug: print(f'{last_second} : performing scroll #{i}')
+					self.do_scroll()
+					self.do_scroll()
 
-				# perform two scrolls once a second
-				if int(loop_elapsed) > last_second:
-					last_second = int(loop_elapsed)
-					for i in range(0,10):
-						if self.debug: print(f'{last_second} : performing scroll #{i}')
-						self.do_scroll()
-						self.do_scroll()
+			# see if time to stop
+			elapsed_no_event = (datetime.datetime.now()-time_since_last_response).total_seconds()
+			
+			if loop_elapsed < self.prewait:
+				if self.debug: print(f'{loop_elapsed}: In prewait period')
 
-				# see if time to stop
-				elapsed_no_event = (datetime.datetime.now()-time_since_last_response).total_seconds()
-				
-				if loop_elapsed < self.prewait:
-					if self.debug: print(f'{loop_elapsed}: In prewait period')
+			if loop_elapsed > self.prewait and (elapsed_no_event > self.no_event_wait or loop_elapsed > self.max_wait):
+				if self.debug: print(f'{loop_elapsed} No event for {elapsed_no_event}, max_wait is {self.max_wait}, breaking Network log loop.')
+				break
 
-				if loop_elapsed > self.prewait and (elapsed_no_event > self.no_event_wait or loop_elapsed > self.max_wait):
-					if self.debug: print(f'{loop_elapsed} No event for {elapsed_no_event}, max_wait is {self.max_wait}, breaking Network log loop.')
-					break
+			# wait 3 seconds and inject scripts
+			if self.injections and not sent_injections and loop_elapsed > 3:
+				if self.debug: print('### JAVASCRIPT INJECTION TIME ###')
 
-				# wait 3 seconds and inject scripts
-				if self.injections and not sent_injections and loop_elapsed > 3:
-					if self.debug: print('### JAVASCRIPT INJECTION TIME ###')
+				for injection in self.injections:
+					if self.debug: print(f'injecting {injection}.js')
+					try:
+						js = json.dumps(open(f'./injections/{injection}', 'r', encoding='utf-8').read())
+					except:
+						self.exit()
+						return ({
+							'success'	: False,
+							'result'	: f'Unable to inject {injection}, does the file exist?'
+						})
 
-					for injection in self.injections:
-						if self.debug: print(f'injecting {injection}.js')
-						try:
-							js = json.dumps(open(f'./injections/{injection}', 'r', encoding='utf-8').read())
-						except:
-							self.exit()
-							return ({
-								'success'	: False,
-								'result'	: f'Unable to inject {injection}, does the file exist?'
-							})
-
-						# don't get return value for load_ scripts
-						if injection[:5] == 'load_':
-							response = self.send_ws_command('Runtime.evaluate',params=f'"expression":{js},"timeout":1000,"returnByValue":false')
-						else:
-							response = self.send_ws_command('Runtime.evaluate',params=f'"expression":{js},"timeout":1000,"returnByValue":true')
-						
-						if response['success'] == False:
-							self.exit()
-							return response
-						else: 
-							# store the ws_id if we need a response, otherwise
-							#	it executes and we don't bother w/response
-							if injection[:5] != 'load_':
-								ws_id = response['result']
-								injection_ws_ids.append(ws_id)
-								ws_id_to_script[ws_id] = injection
-
-					# don't do this again
-					sent_injections = True
-
-				# try to get ws response, returns None if no response
-				devtools_response = self.get_next_ws_response()
-
-				# determine how long since we last got a response with
-				#	a Network event, if we didn't get a response we wait
-				#	for a second
-				if devtools_response:
+					# don't get return value for load_ scripts
+					if injection[:5] == 'load_':
+						response = self.send_ws_command('Runtime.evaluate',params=f'"expression":{js},"timeout":1000,"returnByValue":false')
+					else:
+						response = self.send_ws_command('Runtime.evaluate',params=f'"expression":{js},"timeout":1000,"returnByValue":true')
 					
-					# check if we have a response for our injected js
-					if 'id' in devtools_response:
-						ws_id = devtools_response['id']
+					if response['success'] == False:
+						self.exit()
+						return response
+					else: 
+						# store the ws_id if we need a response, otherwise
+						#	it executes and we don't bother w/response
+						if injection[:5] != 'load_':
+							ws_id = response['result']
+							injection_ws_ids.append(ws_id)
+							ws_id_to_script[ws_id] = injection
 
-						if ws_id in injection_ws_ids:
-							# if result is a string this will make it pretty, otherwise just dump the 
-							#	raw ouutput
-							try:
-								injection_results.append({
-									'script_name'	: ws_id_to_script[ws_id],
-									'result'		: json.dumps(devtools_response['result']['result']['value'])
-									})
-							except:
-								injection_results.append({
-									'script_name'	: ws_id_to_script[ws_id],
-									'result'		: json.dumps(devtools_response['result']['result'])
-									})
+				# don't do this again
+				sent_injections = True
 
-					if 'method' in devtools_response:
-						if 'Network' in devtools_response['method']:
-							time_since_last_response = datetime.datetime.now()
-						else:
-							if self.debug: print(f'No events for {elapsed_no_event} seconds; main loop running for {loop_elapsed}')
-				else:
-					if self.debug: print(f'No events for {elapsed_no_event} seconds; main loop running for {loop_elapsed}')
-					time.sleep(1)
-					continue
+			# try to get ws response, returns None if no response
+			devtools_response = self.get_next_ws_response()
 
-				# if we make it this far devtools_response was not None
-				if self.debug: print(loop_elapsed,json.dumps(devtools_response)[:100])
+			# determine how long since we last got a response with
+			#	a Network event, if we didn't get a response we wait
+			#	for a second
+			if devtools_response:
+				
+				# check if we have a response for our injected js
+				if 'id' in devtools_response:
+					ws_id = devtools_response['id']
 
-				# PRESENCE OF 'METHOD' MEANS WE PROCESS LOG DATA
+					if ws_id in injection_ws_ids:
+						# if result is a string this will make it pretty, otherwise just dump the 
+						#	raw ouutput
+						try:
+							injection_results.append({
+								'script_name'	: ws_id_to_script[ws_id],
+								'result'		: json.dumps(devtools_response['result']['result']['value'])
+								})
+						except:
+							injection_results.append({
+								'script_name'	: ws_id_to_script[ws_id],
+								'result'		: json.dumps(devtools_response['result']['result'])
+								})
+
 				if 'method' in devtools_response:
-					# REQUEST
-					if devtools_response['method'] == 'Network.requestWillBeSent':
-						cleaned_request = self.clean_request(devtools_response['params'])
-						cleaned_request['event_order'] = len(requests)
-
-						# update global start time to measure page load time and calculate offsets
-						if origin_walltime == None or cleaned_request['wall_time'] < origin_walltime:
-							origin_walltime = cleaned_request['wall_time']
-
-						if first_timestamp == None or cleaned_request['timestamp'] < first_timestamp:
-							first_timestamp = cleaned_request['timestamp']
-
-						# DOCUMENT ME
-						if 'redirectResponse' in devtools_response['params']:
-							redirect_response = {}
-							redirect_response['response'] 		= devtools_response['params']['redirectResponse']
-							redirect_response['requestId'] 		= devtools_response['params']['requestId']
-							redirect_response['loaderId'] 		= devtools_response['params']['loaderId']
-							redirect_response['timestamp']		= devtools_response['params']['timestamp']
-							redirect_response['type'] 		 	= devtools_response['params']['type']
-							redirect_response['event_order'] 	= len(responses)
-							responses.append(self.clean_response(redirect_response))
-
-							cleaned_request['redirect_response_url'] = devtools_response['params']['redirectResponse']['url']
-						else:
-							cleaned_request['redirect_response_url'] = None
-
-						requests.append(cleaned_request)
-
-					# REQUEST EXTRA INFO
-					if devtools_response['method'] == 'Network.requestWillBeSentExtraInfo':
-						request_extra_headers.append({
-							'request_id'		: devtools_response['params']['requestId'],
-							'headers'			: devtools_response['params']['headers'],
-							'associated_cookies': devtools_response['params']['associatedCookies']
-						})
-
-					# RESPONSE
-					if devtools_response['method'] == 'Network.responseReceived':
-						responses.append(self.clean_response(devtools_response['params']))
-
-					# RESPONSE EXTRA INFO
-					if devtools_response['method'] == 'Network.responseReceivedExtraInfo':
-						response_extra_headers.append({
-							'request_id'		: devtools_response['params']['requestId'],
-							'headers'			: devtools_response['params']['headers'],
-							'blocked_cookies'	: devtools_response['params']['blockedCookies'],
-						})
-
-					# LOAD FINISHED
-					if devtools_response['method'] == 'Network.loadingFinished':
-						request_id = devtools_response['params']['requestId']
-
-						load_finish_events.append({
-							'encoded_data_length': 	devtools_response['params']['encodedDataLength'],
-							'request_id': 			request_id,
-							'timestamp': 			devtools_response['params']['timestamp'],
-						})
-
-					# WEBSOCKETS
-					if devtools_response['method'] == 'Network.webSocketCreated':
-						if 'initiator' in devtools_response['params']:
-							this_initiator = devtools_response['params']['initiator']
-						else:
-							this_initiator = None
-
-						websockets.append({
-							'request_id'	: devtools_response['params']['requestId'],
-							'url'			: devtools_response['params']['url'],
-							'initiator'		: this_initiator,
-							'event_order'	: len(websockets)
-						})
-
-					if devtools_response['method'] in websocket_event_types:
-						if 'errorMessage' in devtools_response['params']:
-							payload = devtools_response['params']['errorMessage']
-						elif 'request' in devtools_response['params']:
-							payload = devtools_response['params']['request']
-						elif 'response' in devtools_response['params']:
-							payload = devtools_response['params']['response']
-						else:
-							payload = None
-
-						websocket_events.append({
-							'request_id'	: devtools_response['params']['requestId'],
-							'timestamp'		: devtools_response['params']['timestamp'],
-							'event_type'	: devtools_response['method'].replace('Network.',''),
-							'payload'		: payload,
-							'event_order'	: len(websocket_events)
-						})
-
-					# EVENT SOURCE
-					if devtools_response['method'] == 'Network.eventSourceMessageReceived':
-						event_source_msgs.append({
-							'internal_request_id'	: devtools_response['params']['requestId'],
-							'timestamp'			: devtools_response['params']['timestamp'],
-							'event_name'		: devtools_response['params']['eventName'],
-							'event_id'			: devtools_response['params']['eventId'],
-							'data'				: devtools_response['params']['data']
-						})
-
-					# DOMSTORAGE
-					if devtools_response['method'] == 'DOMStorage.domStorageItemAdded' or devtools_response['method'] == 'DOMStorage.domStorageItemUpdated':
-						dom_storage_id = devtools_response['params']['storageId']
-						ds_key = (
-								dom_storage_id['securityOrigin'],
-								dom_storage_id['isLocalStorage'],
-								devtools_response['params']['key']
-						)
-
-						dom_storage_holder[ds_key] = devtools_response['params']['newValue']
-
-			# no need to continue processing if we got nothing back
-			if len(responses) == 0:
-				self.exit()
-				return ({
-					'success': False,
-					'result': 'No responses for page'
-				})
-
-			if len(load_finish_events) == 0:
-				self.exit()
-				return ({
-					'success': False,
-					'result': 'No load_finish_events for page'
-				})
-
-			# Stop getting additional DOMStorage events
-			response = self.send_ws_command('DOMStorage.disable')
-			if response['success'] == False:
-				self.exit()
-				return response
-		else:
-			# if we are not getting the log we still do the prewait/scroll
-			if self.debug: print(f'going to prewait for {self.prewait}')
-			for i in range(0,self.prewait):
-				self.do_scroll
+					if 'Network' in devtools_response['method']:
+						time_since_last_response = datetime.datetime.now()
+					else:
+						if self.debug: print(f'No events for {elapsed_no_event} seconds; main loop running for {loop_elapsed}')
+			else:
+				if self.debug: print(f'No events for {elapsed_no_event} seconds; main loop running for {loop_elapsed}')
 				time.sleep(1)
+				continue
+
+			# if we make it this far devtools_response was not None
+			if self.debug: print(loop_elapsed,json.dumps(devtools_response)[:100])
+
+			# PRESENCE OF 'METHOD' MEANS WE PROCESS LOG DATA
+			if 'method' in devtools_response:
+				# REQUEST
+				if devtools_response['method'] == 'Network.requestWillBeSent':
+					cleaned_request = self.clean_request(devtools_response['params'])
+					cleaned_request['event_order'] = len(requests)
+
+					# update global start time to measure page load time and calculate offsets
+					if origin_walltime == None or cleaned_request['wall_time'] < origin_walltime:
+						origin_walltime = cleaned_request['wall_time']
+
+					if first_timestamp == None or cleaned_request['timestamp'] < first_timestamp:
+						first_timestamp = cleaned_request['timestamp']
+
+					# DOCUMENT ME
+					if 'redirectResponse' in devtools_response['params']:
+						redirect_response = {}
+						redirect_response['response'] 		= devtools_response['params']['redirectResponse']
+						redirect_response['requestId'] 		= devtools_response['params']['requestId']
+						redirect_response['loaderId'] 		= devtools_response['params']['loaderId']
+						redirect_response['timestamp']		= devtools_response['params']['timestamp']
+						redirect_response['type'] 		 	= devtools_response['params']['type']
+						redirect_response['event_order'] 	= len(responses)
+						responses.append(self.clean_response(redirect_response))
+
+						cleaned_request['redirect_response_url'] = devtools_response['params']['redirectResponse']['url']
+					else:
+						cleaned_request['redirect_response_url'] = None
+
+					requests.append(cleaned_request)
+
+				# REQUEST EXTRA INFO
+				if devtools_response['method'] == 'Network.requestWillBeSentExtraInfo':
+					request_extra_headers.append({
+						'request_id'		: devtools_response['params']['requestId'],
+						'headers'			: devtools_response['params']['headers'],
+						'associated_cookies': devtools_response['params']['associatedCookies']
+					})
+
+				# RESPONSE
+				if devtools_response['method'] == 'Network.responseReceived':
+					responses.append(self.clean_response(devtools_response['params']))
+
+				# RESPONSE EXTRA INFO
+				if devtools_response['method'] == 'Network.responseReceivedExtraInfo':
+					response_extra_headers.append({
+						'request_id'		: devtools_response['params']['requestId'],
+						'headers'			: devtools_response['params']['headers'],
+						'blocked_cookies'	: devtools_response['params']['blockedCookies'],
+					})
+
+				# LOAD FINISHED
+				if devtools_response['method'] == 'Network.loadingFinished':
+					request_id = devtools_response['params']['requestId']
+
+					load_finish_events.append({
+						'encoded_data_length': 	devtools_response['params']['encodedDataLength'],
+						'request_id': 			request_id,
+						'timestamp': 			devtools_response['params']['timestamp'],
+					})
+
+				# WEBSOCKETS
+				if devtools_response['method'] == 'Network.webSocketCreated':
+					if 'initiator' in devtools_response['params']:
+						this_initiator = devtools_response['params']['initiator']
+					else:
+						this_initiator = None
+
+					websockets.append({
+						'request_id'	: devtools_response['params']['requestId'],
+						'url'			: devtools_response['params']['url'],
+						'initiator'		: this_initiator,
+						'event_order'	: len(websockets)
+					})
+
+				if devtools_response['method'] in websocket_event_types:
+					if 'errorMessage' in devtools_response['params']:
+						payload = devtools_response['params']['errorMessage']
+					elif 'request' in devtools_response['params']:
+						payload = devtools_response['params']['request']
+					elif 'response' in devtools_response['params']:
+						payload = devtools_response['params']['response']
+					else:
+						payload = None
+
+					websocket_events.append({
+						'request_id'	: devtools_response['params']['requestId'],
+						'timestamp'		: devtools_response['params']['timestamp'],
+						'event_type'	: devtools_response['method'].replace('Network.',''),
+						'payload'		: payload,
+						'event_order'	: len(websocket_events)
+					})
+
+				# EVENT SOURCE
+				if devtools_response['method'] == 'Network.eventSourceMessageReceived':
+					event_source_msgs.append({
+						'internal_request_id'	: devtools_response['params']['requestId'],
+						'timestamp'			: devtools_response['params']['timestamp'],
+						'event_name'		: devtools_response['params']['eventName'],
+						'event_id'			: devtools_response['params']['eventId'],
+						'data'				: devtools_response['params']['data']
+					})
+
+				# DOMSTORAGE
+				if devtools_response['method'] == 'DOMStorage.domStorageItemAdded' or devtools_response['method'] == 'DOMStorage.domStorageItemUpdated':
+					dom_storage_id = devtools_response['params']['storageId']
+					ds_key = (
+							dom_storage_id['securityOrigin'],
+							dom_storage_id['isLocalStorage'],
+							devtools_response['params']['key']
+					)
+
+					dom_storage_holder[ds_key] = devtools_response['params']['newValue']
+
+		# no need to continue processing if we got nothing back
+		if len(responses) == 0:
+			self.exit()
+			return ({
+				'success': False,
+				'result': 'No responses for page'
+			})
+
+		if len(load_finish_events) == 0:
+			self.exit()
+			return ({
+				'success': False,
+				'result': 'No load_finish_events for page'
+			})
+
+		# Stop getting additional DOMStorage events
+		response = self.send_ws_command('DOMStorage.disable')
+		if response['success'] == False:
+			self.exit()
+			return response
+
 		
 		#####################
 		# DEVTOOLS COMMANDS #
 		#####################
 
 		# only issue body commands for network_log
-		if not get_text_only:	
-			if self.return_bodies:
-				if self.debug: print('######################################')
-				if self.debug: print(' Going to send response body commands ')
-				if self.debug: print('######################################')
+		if self.return_bodies:
+			if self.debug: print('######################################')
+			if self.debug: print(' Going to send response body commands ')
+			if self.debug: print('######################################')
 
-				# send commands to get response bodies
-				for event in load_finish_events:
-					request_id = event['request_id']
-					response = self.send_ws_command('Network.getResponseBody',f'"requestId":"{request_id}"')
-					if response['success'] == False:
-						self.exit()
-						return response
-					else: 
-						ws_id = response['result']
-					ws_id_to_req_id[ws_id] = request_id
-					pending_ws_id_to_cmd[ws_id] = 'response_body'
+			# send commands to get response bodies
+			for event in load_finish_events:
+				request_id = event['request_id']
+				response = self.send_ws_command('Network.getResponseBody',f'"requestId":"{request_id}"')
+				if response['success'] == False:
+					self.exit()
+					return response
+				else: 
+					ws_id = response['result']
+				ws_id_to_req_id[ws_id] = request_id
+				pending_ws_id_to_cmd[ws_id] = 'response_body'
 
-				if self.debug: print('\tdone')
+			if self.debug: print('\tdone')
 
-			# No longer need Network domain enabled
-			self.send_ws_command('Network.disable')
-			if response['success'] == False:
-				self.exit()
-				return response
+		# No longer need Network domain enabled
+		self.send_ws_command('Network.disable')
+		if response['success'] == False:
+			self.exit()
+			return response
 
 		# to get IndexedDB entries we need to call them based on
 		#	the securityOrigin of the frame, so we need to get
@@ -1360,6 +1351,23 @@ class ChromeDriver:
 		else:
 			# we only do a prewait if not doing network log
 			load_time = self.prewait
+
+		# if all we're doing is getting text we null out the values we don't need here
+		#	as this allows us to reduce the size of any data that must go over the wire
+		if get_text_only:
+			all_links              = None
+			requests               = None
+			request_extra_headers  = None
+			responses              = None
+			response_extra_headers = None
+			load_finish_events     = None
+			websockets             = None
+			websocket_events       = None
+			event_source_msgs      = None
+			response_bodies        = None
+			cookies                = None
+			misc_storage           = None
+			screen_shot            = None
 
 		# other parts of webxray expect this data format, common to all browser drivers used
 		if self.debug: print('returning data on %s' % url)
