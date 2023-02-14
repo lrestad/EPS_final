@@ -24,7 +24,7 @@ from webxray.ParseURL  import ParseURL
 
 class ChromeDriver:
 	def __init__(self, config, port_offset=0, chrome_path=None):
-		# what horrible things have you done so your karma is so horrible
+		# what horrible things have you done so your karma is so low
 		#	you must debug this?
 		self.debug = False
 		
@@ -167,9 +167,9 @@ class ChromeDriver:
 
 			# open a devtools_connect to the raw_devtools_ws
 			try:
+				self.current_ws_command_id = 0
 				self.devtools_connection = create_connection(raw_devtools_ws)
 				self.devtools_connection.settimeout(3)
-				self.current_ws_command_id = 0
 			except:
 				print(f'Failed to open {raw_devtools_ws}, potentially stale copies of Chrome open.  Kill them.')
 				self.exit()
@@ -197,9 +197,9 @@ class ChromeDriver:
 
 		# try to open our intended ws connection
 		try:
+			self.current_ws_command_id = 0
 			self.devtools_connection = create_connection(debugger_ws_addr)
 			self.devtools_connection.settimeout(3)
-			self.current_ws_command_id = 0
 		except:
 			print(f'Failed to open {debugger_ws_addr}, potentially stale copies of Chrome open.  Kill them.')
 			self.exit()
