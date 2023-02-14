@@ -9,6 +9,7 @@
 
 # standard python packages
 import datetime
+import json
 import multiprocessing
 import optparse
 import os
@@ -19,10 +20,27 @@ import time
 import urllib.parse
 import urllib.request
 
-# set up database connection
-db_engine = 'sqlite'
 
-if db_engine == 'sqlite':
+# There are a large number of setting for webXray, which are
+#	set in the 'resources/configurations' directory.
+#  
+# The default.json config uses sqlite and runs in single threaded, uses
+#	a normal viewable browser, it is best for beginners, and there 
+#	is no need to change it for most users.
+#	
+# For power users, the haystack.json configuration is useful
+#	for creating a large dataset in a postgres database. It
+#	is an example and has many dangerous options, like storaging
+#	images, disabled.  Note you can store all page contents, but
+#	this is highly discouraged on arbitrary websites for obvious
+#	reasons.
+
+config_file_name = 'default.json'
+with open(f'./resources/configurations/{config_file_name}', 'r') as json_file:
+	config = json.load(json_file)
+
+# set up database connection
+if config['database_engine'] == 'sqlite':
 	from webxray.SQLiteDriver import SQLiteDriver
 	sql_driver = SQLiteDriver()
 
@@ -30,7 +48,7 @@ if db_engine == 'sqlite':
 	#	when using sqlite we set to 1 to avoid issues with
 	#	multiple processes trying to use sqlite.
 	pool_size = 1
-elif db_engine == 'postgres':
+elif config['database_engine'] == 'postgresql':
 	from webxray.PostgreSQLDriver import PostgreSQLDriver
 	sql_driver = PostgreSQLDriver()
 
@@ -39,31 +57,16 @@ elif db_engine == 'postgres':
 	#	one process per processor core
 	pool_size = None
 else:
-	print('INVALID DB ENGINE FOR "%s", QUITTING!' % db_engine)
+	print('INVALID DB ENGINE FOR "%s", QUITTING!' % config['database_engine'])
 	quit()
 
 # import our custom utilities
 from webxray.Utilities import Utilities
-utilities = Utilities(db_engine=db_engine)
+utilities = Utilities(db_engine=config['database_engine'])
 
 # check for various dependencies, python version, etc.
 utilities.check_dependencies()
 
-# SET CONFIG
-#
-# There are a large number of setting for webXray, which are
-#	set in a 'config' variable.  Two default configurations are 
-#	'haystack' which collects data needed for examining data transfers
-#	and 'forensic' which collects everything, including images,
-#	page text, and the content of files.  It is A VERY BAD IDEA
-#	to conduct forensic scans on lists of random webpages
-#	as you may be downloading and storing files you do not want.
-#
-# Only use forensic when you are TOTALLY SURE you want to retain
-#	all site content on your machine.  Advanced users can either
-#	edit config details directly in the database or create their
-#	own custom config in Utilities.py.
-config = utilities.get_default_config('haystack')
 
 # Set the client_id based on the hostname, you can put in 
 #	 a custom value of your choosing as well.
@@ -93,7 +96,6 @@ def interaction():
 	print('\tWould you like to:')
 	print('\t\t[C] Collect Data')
 	print('\t\t[A] Analyze Data')
-	print('\t\t[V] Visualize Data')
 	print('\t\t[PC] Policy Collect')
 	print('\t\t[PA] Policy Analyze')
 	print('\t\t[Q] Quit')
@@ -102,7 +104,7 @@ def interaction():
 	while True:
 		selection = input("\tSelection: ").lower()
 
-		acceptable_input = ['c','a','v','pc','pa','q']
+		acceptable_input = ['c','a','pc','pa','q']
 		
 		if selection 	== 'q':
 			quit()
@@ -178,7 +180,7 @@ def interaction():
 		# webXray needs a file with a list of page urls to scan, these files should be kept in the
 		#	'page_lists' directory.  this function shows all available page lists and returns
 		#	the name of the selected list.
-		files = os.listdir(path='./page_lists')
+		files = os.listdir(path='./resources/page_lists')
 		
 		if len(files) == 0:
 			print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
@@ -316,7 +318,7 @@ def collect(db_name, pages_file_name=None, crawl_file_name=None, task='get_scan'
 	start_time = datetime.datetime.now()
 
 	# the main event
-	collector = Collector(db_name,db_engine,client_id)
+	collector = Collector(db_name,config['database_engine'],client_id)
 	if task == 'get_scan':
 		build_task_queue(db_name, 'get_scan', pages_file_name=pages_file_name)
 	elif task=='get_policy':
@@ -352,7 +354,7 @@ def build_task_queue(db_name, task, pages_file_name=None, crawl_file_name=None):
 	start_time = datetime.datetime.now()
 
 	# the main event
-	collector = Collector(db_name,db_engine,client_id)
+	collector = Collector(db_name,config['database_engine'],client_id)
 	if task == 'get_scan':
 		print('\t---------------------------------')
 		print('\t Adding page scans to task queue ')
@@ -403,7 +405,7 @@ def worker_collect(db_name):
 	start_time = datetime.datetime.now()
 
 	# the main event
-	collector = Collector(db_name,db_engine,client_id)
+	collector = Collector(db_name,config['database_engine'],client_id)
 	collector.run(task='process_tasks_from_queue', pool_size=pool_size)
 
 	# fyi
@@ -428,7 +430,7 @@ def analyze(db_name):
 	num_results	= 500
 
 	# set up a new reporter
-	reporter = Reporter(db_name, db_engine, num_tlds, num_results, flush_domain_owners=False)
+	reporter = Reporter(db_name, config['database_engine'], num_tlds, num_results, flush_domain_owners=False)
 
 	# this is the main suite of reports, comment out those you don't need
 	reporter.generate_db_summary_report()
@@ -477,7 +479,7 @@ def policy_report(db_name):
 	num_results	= 100
 
 	# set up a new reporter
-	reporter = Reporter(db_name, db_engine, num_tlds, num_results, flush_domain_owners=False)
+	reporter = Reporter(db_name, config['database_engine'], num_tlds, num_results, flush_domain_owners=False)
 
 	# do relevant policy reports
 	reporter.initialize_policy_reports()
@@ -506,7 +508,7 @@ def rate_estimate(db_name, client_id):
 
 	print('elapsed_minutes\tcurrent_rate\taverage_rate\tremaining_tasks\tremaining_hours')
 	print('---------------\t------------\t------------\t---------------\t---------------')
-	utilities = Utilities(db_name=db_name,db_engine=db_engine)
+	utilities = Utilities(db_name=db_name,db_engine=config['database_engine'])
 	for result in utilities.stream_rate():
 		print('%s\t\t%s\t\t%s\t\t%s\t\t%s' % (
 				result[client_id]['elapsed_minutes'],
@@ -526,7 +528,7 @@ def store_results_from_queue():
 		with server if set to queue results.
 	"""
 	from webxray.Collector import Collector
-	collector = Collector(db_engine=db_engine)
+	collector = Collector(db_engine=config['database_engine'])
 	collector.run(task='store_results_from_queue', pool_size=pool_size)
 # store_results_from_queue
 

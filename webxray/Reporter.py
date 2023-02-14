@@ -47,7 +47,7 @@ class Reporter:
 		if db_engine == 'sqlite':
 			from webxray.SQLiteDriver import SQLiteDriver
 			self.sql_driver = SQLiteDriver(db_name)
-		elif db_engine == 'postgres':
+		elif db_engine == 'postgresql':
 			from webxray.PostgreSQLDriver import PostgreSQLDriver
 			self.sql_driver = PostgreSQLDriver(db_name)
 		else:

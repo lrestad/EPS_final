@@ -48,7 +48,7 @@ class Collector:
 			if self.db_engine == 'sqlite':
 				from webxray.SQLiteDriver import SQLiteDriver
 				sql_driver = SQLiteDriver(self.db_name)
-			elif self.db_engine == 'postgres':
+			elif self.db_engine == 'postgresql':
 				from webxray.PostgreSQLDriver import PostgreSQLDriver
 				sql_driver = PostgreSQLDriver(self.db_name)
 			else:
@@ -79,7 +79,7 @@ class Collector:
 		if self.db_engine == 'sqlite':
 			from webxray.SQLiteDriver import SQLiteDriver
 			sql_driver = SQLiteDriver(self.db_name)
-		elif self.db_engine == 'postgres':
+		elif self.db_engine == 'postgresql':
 			from webxray.PostgreSQLDriver import PostgreSQLDriver
 			sql_driver = PostgreSQLDriver(self.db_name)
 		else:
@@ -198,7 +198,7 @@ class Collector:
 			if self.db_engine == 'sqlite':
 				from webxray.SQLiteDriver import SQLiteDriver
 				sql_driver = SQLiteDriver(params['db_name'])
-			elif self.db_engine == 'postgres':
+			elif self.db_engine == 'postgresql':
 				from webxray.PostgreSQLDriver import PostgreSQLDriver
 				sql_driver = PostgreSQLDriver(params['db_name'])
 			else:
@@ -209,7 +209,7 @@ class Collector:
 			if self.db_engine == 'sqlite':
 				from webxray.SQLiteDriver import SQLiteDriver
 				sql_driver = SQLiteDriver(self.db_name)
-			elif self.db_engine == 'postgres':
+			elif self.db_engine == 'postgresql':
 				from webxray.PostgreSQLDriver import PostgreSQLDriver
 				sql_driver = PostgreSQLDriver(self.db_name)
 			else:
@@ -385,7 +385,7 @@ class Collector:
 		if self.db_engine == 'sqlite':
 			from webxray.SQLiteDriver import SQLiteDriver
 			sql_driver = SQLiteDriver(self.db_name)
-		elif self.db_engine == 'postgres':
+		elif self.db_engine == 'postgresql':
 			from webxray.PostgreSQLDriver import PostgreSQLDriver
 			sql_driver = PostgreSQLDriver(self.db_name)
 		else:
@@ -394,7 +394,7 @@ class Collector:
 
 		# open list of pages
 		try:
-			crawl_list = json.load(open(os.path.dirname(os.path.abspath(__file__)) + '/../crawl_lists/' + crawl_file_name, 'r', encoding='utf-8'))
+			crawl_list = json.load(open('./resources/crawl_lists/' + crawl_file_name, 'r', encoding='utf-8'))
 		except:
 			print(f'Could not open {crawl_file_name}, is it correctly formatted and present in the ./crawl_lists directory?  Exiting.')
 			sql_driver.close()
@@ -462,7 +462,7 @@ class Collector:
 		if self.db_engine == 'sqlite':
 			from webxray.SQLiteDriver import SQLiteDriver
 			sql_driver = SQLiteDriver(self.db_name)
-		elif self.db_engine == 'postgres':
+		elif self.db_engine == 'postgresql':
 			from webxray.PostgreSQLDriver import PostgreSQLDriver
 			sql_driver = PostgreSQLDriver(self.db_name)
 		else:
@@ -471,7 +471,7 @@ class Collector:
 
 		# open list of pages
 		try:
-			url_list = open(os.path.dirname(os.path.abspath(__file__)) + '/../page_lists/' + pages_file_name, 'r', encoding='utf-8')
+			url_list = open('./resources/page_lists/' + pages_file_name, 'r', encoding='utf-8')
 		except:
 			print('File "%s" does not exist, file must be in ./page_lists directory.  Exiting.' % pages_file_name)
 			sql_driver.close()
@@ -544,7 +544,7 @@ class Collector:
 		if self.db_engine == 'sqlite':
 			from webxray.SQLiteDriver import SQLiteDriver
 			sql_driver = SQLiteDriver(self.db_name)
-		elif self.db_engine == 'postgres':
+		elif self.db_engine == 'postgresql':
 			from webxray.PostgreSQLDriver import PostgreSQLDriver
 			sql_driver = PostgreSQLDriver(self.db_name)
 		else:
@@ -660,7 +660,7 @@ class Collector:
 			if self.db_engine == 'sqlite':
 				from webxray.SQLiteDriver import SQLiteDriver
 				sql_driver = SQLiteDriver(self.db_name)
-			elif self.db_engine == 'postgres':
+			elif self.db_engine == 'postgresql':
 				from webxray.PostgreSQLDriver import PostgreSQLDriver
 				sql_driver = PostgreSQLDriver(self.db_name)
 			else:

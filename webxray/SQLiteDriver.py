@@ -18,7 +18,7 @@ class SQLiteDriver:
 		set the root path for the db directory since sqlite dbs are not contained in a server
 		if db_name is specified, set up global connection
 		"""
-		self.db_root_path = os.path.dirname(os.path.abspath(__file__))+'/resources/db/sqlite/'
+		self.db_root_path = './resources/db/sqlite/'
 
 		# the db_prefix can be overridden if you like
 		self.db_prefix = db_prefix
@@ -110,6 +110,8 @@ class SQLiteDriver:
 				client_reject_redirects,
 				client_min_internal_links,
 				client_injections,
+				client_incognito,
+				client_headless,
 				max_attempts,
 				store_1p,
 				store_base64,
@@ -164,6 +166,8 @@ class SQLiteDriver:
 				?,
 				?,
 				?,
+				?,
+				?,
 				?
 			)
 		""", (
@@ -181,6 +185,8 @@ class SQLiteDriver:
 			config['client_reject_redirects'],
 			config['client_min_internal_links'],
 			json.dumps(config['client_injections']),
+			config['client_incognito'],
+			config['client_headless'],
 			config['max_attempts'],
 			config['store_1p'],
 			config['store_base64'],
@@ -229,6 +235,7 @@ class SQLiteDriver:
 				client_min_internal_links,
 				client_injections,
 				client_incognito,
+				client_headless,
 				max_attempts,
 				store_1p,
 				store_base64,
@@ -275,26 +282,27 @@ class SQLiteDriver:
 			'client_min_internal_links'		: result[12],
 			'client_injections'				: json.loads(result[13]),
 			'client_incognito'				: result[14],
-			'max_attempts'					: result[15],
-			'store_1p'						: result[16],
-			'store_base64'					: result[17],
-			'store_files'					: result[18],
-			'store_screen_shot'				: result[19],
-			'store_source'					: result[20],
-			'store_page_text'				: result[21],
-			'store_links'					: result[22],
-			'store_misc_storage'			: result[23],
-			'store_responses'				: result[24],
-			'store_request_xtra_headers'	: result[25],
-			'store_response_xtra_headers'	: result[26],
-			'store_requests'				: result[27],
-			'store_websockets'				: result[28],
-			'store_websocket_events'		: result[29],
-			'store_event_source_msgs'		: result[30],
-			'store_cookies'					: result[31],
-			'store_security_details'		: result[32],
-			'timeseries_enabled'			: result[33],
-			'timeseries_interval'			: result[34]
+			'client_headless'				: result[15],
+			'max_attempts'					: result[16],
+			'store_1p'						: result[17],
+			'store_base64'					: result[18],
+			'store_files'					: result[19],
+			'store_screen_shot'				: result[20],
+			'store_source'					: result[21],
+			'store_page_text'				: result[22],
+			'store_links'					: result[23],
+			'store_misc_storage'			: result[24],
+			'store_responses'				: result[25],
+			'store_request_xtra_headers'	: result[26],
+			'store_response_xtra_headers'	: result[27],
+			'store_requests'				: result[28],
+			'store_websockets'				: result[29],
+			'store_websocket_events'		: result[30],
+			'store_event_source_msgs'		: result[31],
+			'store_cookies'					: result[32],
+			'store_security_details'		: result[33],
+			'timeseries_enabled'			: result[34],
+			'timeseries_interval'			: result[35]
 		}
 	# get_config
 
@@ -373,7 +381,7 @@ class SQLiteDriver:
 				self.db_conn.commit()
 
 		# insert domain owners
-		domain_owner_data = json.load(open(os.path.dirname(os.path.abspath(__file__))+'/resources/domain_owners/domain_owners.json', 'r', encoding='utf-8'))
+		domain_owner_data = json.load(open('./resources/domain_owners/domain_owners.json', 'r', encoding='utf-8'))
 		for domain_owner in domain_owner_data:
 			# arrays get stored as json strings
 			domain_owner['aliases'] 					= json.dumps(domain_owner['aliases'])

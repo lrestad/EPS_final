@@ -20,7 +20,7 @@ class Utilities:
 			if db_engine == 'sqlite':
 				from webxray.SQLiteDriver import SQLiteDriver
 				self.sql_driver = SQLiteDriver(db_name)
-			elif db_engine == 'postgres':
+			elif db_engine == 'postgresql':
 				from webxray.PostgreSQLDriver import PostgreSQLDriver
 				self.sql_driver = PostgreSQLDriver(db_name)
 			else:
@@ -30,14 +30,18 @@ class Utilities:
 			if db_engine == 'sqlite':
 				from webxray.SQLiteDriver import SQLiteDriver
 				self.sql_driver = SQLiteDriver()
-			elif db_engine == 'postgres':
+			elif db_engine == 'postgresql':
 				from webxray.PostgreSQLDriver import PostgreSQLDriver
 				self.sql_driver = PostgreSQLDriver()
 			else:
 				print('Utilities.py: INVALID DB ENGINE FOR %s, QUITTING!' % db_engine)
 				quit()
 
+		# couple more things we need to have on hand
 		self.url_parser = ParseURL()
+
+		with open('./resources/policyxray/policy_terms.json', 'r', encoding='utf-8') as json_file:
+ 			self.policy_terms = json.load(json_file)
 	# __init__
 
 	def check_dependencies(self):
@@ -77,93 +81,6 @@ class Utilities:
 			quit()
 
 	# check_dependencies
-
-	def get_default_config(self, config_type):
-		# the following are two pre-configured options for
-		#	haystack and forensic scans, can be tweaked as desired
-		if config_type == 'haystack':
-			return {
-				'client_browser_type'			: 'chrome',
-				'client_prewait'				: 10,
-				'client_no_event_wait'			: 20,
-				'client_max_wait'				: 60,
-				'client_get_bodies'				: False,
-				'client_get_bodies_b64'			: False,
-				'client_get_screen_shot'		: False,
-				'client_get_text'				: False,
-				'client_crawl_depth'			: 3,
-				'client_crawl_retries'			: 5,
-				'client_page_load_strategy'		: 'none',
-				'client_reject_redirects'		: False,
-				'client_min_internal_links'		: None,
-				'client_injections'				: None,
-				'client_incognito'				: False,
-				'max_attempts'					: 5,
-				'store_1p'						: True,
-				'store_base64'					: False,
-				'store_files'					: True,
-				'store_screen_shot'				: False,
-				'store_source'					: False,
-				'store_page_text'				: False,
-				'store_links'					: True,
-				'store_misc_storage'			: True,
-				'store_responses'				: True,
-				'store_request_xtra_headers'	: True,
-				'store_response_xtra_headers'	: True,
-				'store_requests'				: True,
-				'store_websockets'				: True,
-				'store_websocket_events'		: True,
-				'store_event_source_msgs'		: True,
-				'store_cookies'					: True,
-				'store_security_details'		: True,
-				'timeseries_enabled'			: False,
-				'timeseries_interval'			: 10
-			}
-		elif config_type == 'forensic':
-			return {
-				'client_browser_type'			: 'chrome',
-				'client_prewait'				: 10,
-				'client_no_event_wait'			: 20,
-				'client_max_wait'				: 60,
-				'client_get_bodies'				: True,
-				'client_get_bodies_b64'			: True,
-				'client_get_screen_shot'		: True,
-				'client_get_text'				: True,
-				'client_crawl_depth'			: 3,
-				'client_crawl_retries'			: 5,
-				'client_page_load_strategy'		: 'none',
-				'client_reject_redirects'		: True,
-				'client_min_internal_links'		: None,
-				'client_injections'				: ['load_consent_utils.js','accept_consent_by_id.js'],
-				'client_incognito'				: False,
-				'max_attempts'					: 5,
-				'store_1p'						: True,
-				'store_base64'					: True,
-				'store_files'					: True,
-				'store_screen_shot'				: True,
-				'store_source'					: True,
-				'store_page_text'				: True,
-				'store_links'					: True,
-				'store_misc_storage'			: True,
-				'store_responses'				: True,
-				'store_request_xtra_headers'	: True,
-				'store_response_xtra_headers'	: True,
-				'store_requests'				: True,
-				'store_websockets'				: True,
-				'store_websocket_events'		: True,
-				'store_event_source_msgs'		: True,
-				'store_cookies'					: True,
-				'store_security_details'		: True,
-				'timeseries_enabled'			: False,
-				'timeseries_interval'			: 0
-			}
-		elif config_type == 'custom':
-			print('Create a custom config in Utilities.py')
-			quit()
-		else:
-			print('Invalid config option, see Utilities.py')
-			quit()
-	# get_default_config
 
 	def select_wbxr_db(self):
 		"""
@@ -432,7 +349,7 @@ class Utilities:
 		"""
 		policy_link_terms = []
 		# go through json file and merge terms together
-		for lang_term_set in json.load(open(os.path.dirname(os.path.abspath(__file__))+'/resources/policyxray/policy_terms.json', 'r', encoding='utf-8')):
+		for lang_term_set in json.load(open('./resources/policyxray/policy_terms.json', 'r', encoding='utf-8')):
 			for term in lang_term_set['policy_link_terms']:
 				policy_link_terms.append(term)
 		return policy_link_terms
@@ -452,7 +369,7 @@ class Utilities:
 		policy_verification_terms['ccpa_statement']		= []
 
 		# go through json file and merge terms together
-		for lang_term_set in json.load(open(os.path.dirname(os.path.abspath(__file__))+'/resources/policyxray/policy_terms.json', 'r', encoding='utf-8')):
+		for lang_term_set in self.policy_terms:
 			for term in lang_term_set['privacy_policy_verification_terms']:
 				policy_verification_terms['privacy_policy'] = policy_verification_terms['privacy_policy'] + [term]
 
@@ -479,7 +396,7 @@ class Utilities:
 		Returns a dict of privacy policy terms keyed by language code.
 		"""
 		lang_to_terms = {}
-		for lang_term_set in json.load(open(os.path.dirname(os.path.abspath(__file__))+'/resources/policyxray/policy_terms.json', 'r', encoding='utf-8')):
+		for lang_term_set in self.policy_terms:
 			lang_to_terms[lang_term_set['lang']] = lang_term_set['policy_terms']
 		return lang_to_terms
 	# get_lang_to_priv_term_dict

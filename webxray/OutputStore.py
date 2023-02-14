@@ -34,7 +34,7 @@ class OutputStore:
 		if db_engine == 'sqlite':
 			from webxray.SQLiteDriver import SQLiteDriver
 			self.sql_driver = SQLiteDriver(self.db_name)
-		elif db_engine == 'postgres':
+		elif db_engine == 'postgresql':
 			from webxray.PostgreSQLDriver import PostgreSQLDriver
 			self.sql_driver = PostgreSQLDriver(self.db_name)
 		else:

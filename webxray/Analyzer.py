@@ -19,7 +19,7 @@ class Analyzer:
 		if db_engine == 'sqlite':
 			from webxray.SQLiteDriver import SQLiteDriver
 			self.sql_driver = SQLiteDriver(db_name)
-		elif db_engine == 'postgres':
+		elif db_engine == 'postgresql':
 			from webxray.PostgreSQLDriver import PostgreSQLDriver
 			self.sql_driver = PostgreSQLDriver(db_name)
 		else:
@@ -82,7 +82,8 @@ class Analyzer:
 		# next we pull the owner/domain pairings from the json file in 
 		# 	the resources dir and add to the db
 		print('\tPatching with new domain owner data...', end='', flush=True)
-		domain_owner_data = json.load(open(os.path.dirname(os.path.abspath(__file__))+'/resources/domain_owners/domain_owners.json', 'r', encoding='utf-8'))
+		with open('./resources/policyxray/Readability.js', 'r', encoding='utf-8') as json_file:
+			domain_owner_data = json.load(json_file)
 		for item in domain_owner_data:
 			# skipping for now, but perhaps find a way to enter this in db?
 			if 'revision_date' in item: continue

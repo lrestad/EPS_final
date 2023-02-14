@@ -19,7 +19,7 @@ class SingleScan:
 		self.id_to_parent	= {}
 
 		# set up the domain ownership dictionary
-		for item in json.load(open(os.path.dirname(os.path.abspath(__file__))+'/resources/domain_owners/domain_owners.json', 'r', encoding='utf-8')):
+		for item in json.load(open('./resources/domain_owners/domain_owners.json', 'r', encoding='utf-8')):
 			if item['id'] == '-': continue
 
 			self.id_to_owner[item['id']] 	= item['name']
@@ -43,11 +43,12 @@ class SingleScan:
 		Main function, loads page and analyzes results.
 		"""
 
-		print('\t~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-		print('\tSingle Site Test On: %s' % url)
-		print('\t - Browser type is %s' % config['client_browser_type'])
-		print('\t - Browser max wait time is %s seconds' % config['client_max_wait'])
-		print('\tImportant Note: If you run more than one single test at a time you will encounter errors - some of which are silent!')
+		print(f'Single Site Test On: {url}')
+		print(f' - Browser type is {config["client_browser_type"]}')
+		print(f' - Browser max wait time is {config["client_max_wait"]} seconds')
+		print('\nImportant Note: ')
+		print('\tIf you run more than one single test at a time ')
+		print('\tyou will encounter errors - some of which are silent!')
 
 		# make sure it is an http(s) address
 		if not re.match('^https?://', url): 
@@ -67,7 +68,7 @@ class SingleScan:
 
 		# if there was a problem we print the error
 		if browser_output['success'] == False:
-			print('\t\t%-50s Browser Error: %s' % (url[:50], browser_output['result']))
+			print(f'Browser Error: {browser_output["result"]}')
 			return
 		else:
 			browser_output = browser_output['result']
@@ -87,21 +88,21 @@ class SingleScan:
 		origin_pubsuffix 	= origin_ip_fqdn_domain_pubsuffix_tld[3]
 		origin_tld 			= origin_ip_fqdn_domain_pubsuffix_tld[4]
 
-		print('\n\t------------------{ URL }------------------')
-		print('\t %s' % url)
-		print('\n\t------------------{ Final URL }------------------')
-		print('\t %s' % browser_output['final_url'])
-		print('\n\t------------------{ Title }------------------')
-		print('\t %s' % browser_output['title'])
-		print('\n\t------------------{ Description }------------------')
-		print('\t %s' % browser_output['meta_desc'])
-		print('\n\t------------------{ Domain }------------------')
-		print('\t %s' % origin_domain)
-		print('\n\t------------------{ Seconds to Complete Download }------------------')
-		print('\t%s' % (browser_output['load_time']))
-		print('\n\t------------------{ Incognito Mode Status }------------------')
-		print('\t%s' % (browser_output['browser_incognito']))
-		print('\n\t------------------{ Cookies }------------------')
+		print('\n------------------{ URL }------------------')
+		print(url)
+		print('\n------------------{ Final URL }------------------')
+		print(browser_output['final_url'])
+		print('\n------------------{ Title }------------------')
+		print(browser_output['title'])
+		print('\n------------------{ Description }------------------')
+		print(browser_output['meta_desc'])
+		print('\n------------------{ Domain }------------------')
+		print(origin_domain)
+		print('\n------------------{ Seconds to Complete Download }------------------')
+		print(browser_output['load_time'])
+		print('\n------------------{ Incognito Mode Status }------------------')
+		print(browser_output['browser_incognito'])
+		print('\n------------------{ Cookies }------------------')
 		# put relevant fields from cookies into list we can sort
 		cookie_list = []
 		for cookie in browser_output['cookies']:
@@ -111,23 +112,23 @@ class SingleScan:
 		for count,cookie in enumerate(cookie_list):
 			print(f'\t[{count}] {cookie}')
 			
-		print('\n\t------------------{ LocalStorage }------------------')
+		print('\n------------------{ LocalStorage }------------------')
 		for item in browser_output['misc_storage']:
 			if item['type'] == 'local_storage':	print(f"\t{item['security_origin']}: {item['key']}")
 
-		print('\n\t------------------{ SessionStorage }------------------')
+		print('\n------------------{ SessionStorage }------------------')
 		for item in browser_output['misc_storage']:
 			if item['type'] == 'session_storage':	print(f"\t{item['security_origin']}: {item['key']}")
 
-		print('\n\t------------------{ IndexedDB }------------------')
+		print('\n------------------{ IndexedDB }------------------')
 		for item in browser_output['misc_storage']:
 			if item['type'] == 'indexeddb':	print(f"\t{item['security_origin']}: {item['key']}")
 
-		print('\n\t------------------{ CacheStorage }------------------')
+		print('\n------------------{ CacheStorage }------------------')
 		for item in browser_output['misc_storage']:
 			if item['type'] == 'cache_storage':	print(f"\t{item['security_origin']}: {item['key']}")
 
-		print('\n\t------------------{ Domains Requested }------------------')
+		print('\n------------------{ Domains Requested }------------------')
 		request_domains = set()
 
 		for request in browser_output['requests']:
@@ -138,7 +139,7 @@ class SingleScan:
 			# parse domain from the requested url
 			domain_info = self.url_parser.get_parsed_domain_info(request['url'])
 			if domain_info['success'] == False:
-				print('\tUnable to parse domain info for %s with error %s' % (request['url'], domain_info['result']))
+				print(f'Unable to parse domain info for {request["url"]} with error {domain_info["result"]}')
 				continue
 
 			# if origin_domain != domain_info['result']['domain']:
@@ -151,12 +152,12 @@ class SingleScan:
 				lineage = ''
 				for item in self.get_lineage(self.domain_owners[domain]):
 					lineage += self.id_to_owner[item]+' > '
-				print('\t%s) %s [%s]' % (count, domain, lineage[:-3]))
+				print(f'\t{count}) {domain} [{lineage[:-3]}]')
 			else:
-				print('\t%s) %s [Unknown Owner]' % (count, domain))
+				print(f'\t{count}) {domain} [Unknown Owner]')
 
 		if len(browser_output['injection_results']) != 0:
-			print('\n\t------------------{ Injection Results }------------------')
+			print('\n------------------{ Injection Results }------------------')
 			for injection in browser_output['injection_results']:
 				print(f"\t{injection['script_name']}")
 				print(f"\t\t{injection['result']}")

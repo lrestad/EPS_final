@@ -26,7 +26,10 @@ class ParseURL:
 
 		# get domain owner data
 		self.domain_owners = {}
-		domain_owner_data = json.load(open(os.path.dirname(os.path.abspath(__file__))+'/resources/domain_owners/domain_owners.json', 'r', encoding='utf-8'))
+
+		with open('./resources/domain_owners/domain_owners.json', 'r', encoding='utf-8') as json_file:
+			domain_owner_data = json.load(json_file)
+		
 		for item in domain_owner_data:
 			# skipping for now, but perhaps find a way to enter this in db?
 			if 'revision_date' in item: continue
@@ -41,7 +44,7 @@ class ParseURL:
 		"""
 
 		# path is relative from root webxray directory
-		pubsuffix_raw_list = open(os.path.dirname(os.path.abspath(__file__))+'/resources/pubsuffix/public_suffix_list.dat', mode='r', encoding='utf8')
+		pubsuffix_raw_list = open('./resources/pubsuffix/public_suffix_list.dat', mode='r', encoding='utf8')
 		pubsuffix_list = []
 
 		for line in pubsuffix_raw_list:

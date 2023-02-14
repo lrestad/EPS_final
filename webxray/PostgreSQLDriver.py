@@ -26,8 +26,8 @@ class PostgreSQLDriver:
 		"""
 
 		# modify this per your install
-		self.db_user = ''
-		self.db_pass = ''
+		self.db_user = 'wbxr'
+		self.db_pass = 'wbxr'
 		self.db_host = 'localhost'
 		self.db_port = '5432'
 
@@ -180,7 +180,7 @@ class PostgreSQLDriver:
 		self.db_switch(None)
 
 		# initialize webxray formatted database
-		db_init_file = open(os.path.dirname(os.path.abspath(__file__))+'/resources/db/postgresql/wbxr_db_init.sql', 'r', encoding='utf-8')
+		db_init_file = open('./resources/db/postgresql/wbxr_db_init.sql', 'r', encoding='utf-8')
 		for query in db_init_file:
 			# skip lines that are comments
 			if "-" in query[0]: continue
@@ -191,7 +191,7 @@ class PostgreSQLDriver:
 			self.db_conn.commit()
 
 		# insert domain owners
-		domain_owner_data = json.load(open(os.path.dirname(os.path.abspath(__file__))+'/resources/domain_owners/domain_owners.json', 'r', encoding='utf-8'))
+		domain_owner_data = json.load(open('./resources/domain_owners/domain_owners.json', 'r', encoding='utf-8'))
 		for domain_owner in domain_owner_data:
 			# arrays get stored as json strings
 			domain_owner['aliases'] 					= json.dumps(domain_owner['aliases'])
@@ -240,6 +240,7 @@ class PostgreSQLDriver:
 				client_min_internal_links,
 				client_injections,
 				client_incognito,
+				client_headless,
 				max_attempts,
 				store_1p,
 				store_base64,
@@ -295,6 +296,7 @@ class PostgreSQLDriver:
 				%s,
 				%s,
 				%s,
+				%s,
 				%s
 			)
 		""", (
@@ -313,6 +315,7 @@ class PostgreSQLDriver:
 			config['client_min_internal_links'],
 			json.dumps(config['client_injections']),
 			config['client_incognito'],
+			config['client_headless'],
 			config['max_attempts'],
 			config['store_1p'],
 			config['store_base64'],
@@ -361,6 +364,7 @@ class PostgreSQLDriver:
 				client_min_internal_links,
 				client_injections,
 				client_incognito,
+				client_headless,
 				max_attempts,
 				store_1p,
 				store_base64,
@@ -407,26 +411,27 @@ class PostgreSQLDriver:
 			'client_min_internal_links'		: result[12],
 			'client_injections'				: json.loads(result[13]),
 			'client_incognito'				: result[14],
-			'max_attempts'					: result[15],
-			'store_1p'						: result[16],
-			'store_base64'					: result[17],
-			'store_files'					: result[18],
-			'store_screen_shot'				: result[19],
+			'client_headless'				: result[15],
+			'max_attempts'					: result[16],
+			'store_1p'						: result[17],
+			'store_base64'					: result[18],
+			'store_files'					: result[19],
+			'store_screen_shot'				: result[20],
 			'store_source'					: result[21],
-			'store_page_text'				: result[21],
-			'store_links'					: result[22],
-			'store_misc_storage'			: result[23],
-			'store_responses'				: result[24],
-			'store_request_xtra_headers'	: result[25],
-			'store_response_xtra_headers'	: result[26],
-			'store_requests'				: result[27],
-			'store_websockets'				: result[28],
-			'store_websocket_events'		: result[29],
-			'store_event_source_msgs'		: result[30],
-			'store_cookies'					: result[31],
-			'store_security_details'		: result[32],
-			'timeseries_enabled'			: result[33],
-			'timeseries_interval'			: result[34]
+			'store_page_text'				: result[22],
+			'store_links'					: result[23],
+			'store_misc_storage'			: result[24],
+			'store_responses'				: result[25],
+			'store_request_xtra_headers'	: result[26],
+			'store_response_xtra_headers'	: result[27],
+			'store_requests'				: result[28],
+			'store_websockets'				: result[29],
+			'store_websocket_events'		: result[30],
+			'store_event_source_msgs'		: result[31],
+			'store_cookies'					: result[32],
+			'store_security_details'		: result[33],
+			'timeseries_enabled'			: result[34],
+			'timeseries_interval'			: result[35]
 		}
 	# get_config
 
@@ -457,7 +462,7 @@ class PostgreSQLDriver:
 		self.db_switch(None)
 
 		# initialize webxray formatted database
-		db_init_file = open(os.path.dirname(os.path.abspath(__file__))+'/resources/db/postgresql/wbxr_server_db_init.sql', 'r', encoding='utf-8')
+		db_init_file = open('./resources/db/postgresql/wbxr_server_db_init.sql', 'r', encoding='utf-8')
 		for query in db_init_file:
 			# skip lines that are comments
 			if "-" in query[0]: continue

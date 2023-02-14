@@ -5,6 +5,7 @@ import platform
 import random
 import re
 import subprocess
+import tempfile
 import time
 import urllib.request
 
@@ -22,7 +23,9 @@ from urllib.parse import urlunsplit
 from webxray.ParseURL  import ParseURL
 
 class ChromeDriver:
-	def __init__(self, config, port_offset=1, chrome_path=None, headless=True):
+	def __init__(self, config, port_offset=0, chrome_path=None):
+		# what horrible things have you done so your karma is so horrible
+		#	you must debug this?
 		self.debug = False
 		
 		# unpack config
@@ -40,7 +43,7 @@ class ChromeDriver:
 		self.page_load_strategy		= config['client_page_load_strategy']
 		self.min_internal_links		= config['client_min_internal_links']
 		self.incognito				= config['client_incognito']
-		self.headless 				= headless
+		self.headless 				= config['client_headless']
 
 		# custom library in /webxray
 		self.url_parser = ParseURL()
@@ -58,6 +61,8 @@ class ChromeDriver:
 		# list of files in ./injections we want to execute
 		self.injections			= config['client_injections']
 
+		chrome_commands = []
+
 		# we can override the path here
 		if chrome_path:
 			chrome_cmd = chrome_cmd
@@ -65,85 +70,151 @@ class ChromeDriver:
 			# if path is not specified we use the common
 			#	paths for each os
 			if platform.system() == 'Darwin':
-				chrome_cmd = '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome '
+				chrome_commands.append('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
 			elif platform.system() == 'Linux':
-				chrome_cmd = '/usr/bin/google-chrome '
+				chrome_commands.append('/usr/bin/google-chrome')
 				# make sure chrome doesnt' access for keychain password
-				chrome_cmd += ' --password-store=basic '
+				chrome_commands.append('--password-store=basic')
 			elif platform.system() == 'Windows':
 				chrome_cmd = 'start chrome '
 			else:
 				print('Unable to determine Operating System and therefore cannot guess correct Chrome path, see ChromeDriver.py for details.')
 				exit()
 		
+		# no idea what this actually does in a practical sense, but
+		#	if something breaks we can try it, just leaving inert
+		#	for now
+		#chrome_commands.append('--enable-automation')
+
 		# use port offset to avoid collissions between processes
 		#	note that if two single scan processes are running they may
 		#	end up using the same connection and bad things will
 		#	happen
 		port = 9222+port_offset
-
-		# each process will use it's own debugging port or we use default 9222
-		chrome_cmd += '--remote-debugging-port=%s' % port
+		chrome_commands.append(f'--remote-debugging-port={port}')
 
 		# sets up blank profile
-		chrome_cmd += ' --guest'
+		chrome_commands.append('--guest')
 
-		# not sure this really does anything
-		chrome_cmd += ' --disable-gpu'
+		# not sure this really does anything, but appears in various
+		#	examples online and it doesn't hurt anything
+		chrome_commands.append('--disable-gpu')
 
-		# no execution path for this now, but maybe in the future?
-		if self.incognito: chrome_cmd += ' --incognito'
+		# in case you want to do these specific tests
+		if self.incognito: chrome_commands.append('--incognito')
 
 		# set up headless
-		if self.headless: 	chrome_cmd += ' --headless'
+		if self.headless: chrome_commands.append('--headless')
 
-		# if we're in production send the subprocess output to dev/null, None is normal
-		if not self.debug:
-			devnull = open(os.devnull, 'w')
-		else:
-			devnull = None
+		# now things get a bit weird, sometime around 110.0.5481.77
+		#	the normal means of getting the devtools websocket address
+		#	from http://localhost:port/json stopped working in headless.
+		#
+		# this turned out ot be a real pain in the ass, but I figured
+		#	out an even lower-level work around which works as follows:
+		#		1) pull the raw connection address from stderr
+		#		2) connect to that
+		#		3) from there create a new 'target' in chrome
+		#		4) close the 'raw' websocket
+		#		5) open a new websocket with the fresh target_id
+		#
+		# if the above is confusing don't worry about it, just know
+		#	it works and there are ways to go deeper into the guts
+		#	than the typical /json means
 
-		# run command and as subprocess
-		if self.debug: print(f'going to run command: "{chrome_cmd}"')
-		subprocess.Popen(chrome_cmd,shell=True,stdin=None,stdout=devnull,stderr=devnull,close_fds=True)
+		# open subprocess with stderr directed to a tempfile, this is
+		#	where we pull out the address.  note this is a hack so
+		#	we can continue execution after we launch the browser,
+		#	using the typical PIPE approach gets us stuck.
 
-		# allow browser to launch
-		time.sleep(5)
-
-		# the debugger address has a 'json' path where we can find the websocket
-		#	address which is how we send devtools commands, thus we extract the value
-		#	"webSocketDebuggerUrl" from the first json object
-		try:
-			debuggerAddress_json = json.loads(urllib.request.urlopen('http://localhost:%s/json' % port).read().decode())
-			if self.debug: print(debuggerAddress_json)
-			webSocketDebuggerUrl = debuggerAddress_json[0]['webSocketDebuggerUrl']
+		with tempfile.NamedTemporaryFile(mode="w", delete=False) as outfile:
+			subprocess.Popen(
+				chrome_commands, 
+				stderr=outfile, 
+				stdout=None
+			)
 			self.launched = True
-		except Exception as e:
-			self.launched = False
+
+		# before we run additional commands we give the browser some time 
+		#	to boot
+		time.sleep(2)
+
+		# if all things are working as they should, we can read the chrome debugger
+		#	address from the following url, if we can't that means chrome
+		#	never created a target, so we have to do that manually, which is a major
+		#	chore.  I hope this is a temporary bug and we can remove this at some point
+		try:
+			debugger_ws_addr = json.loads(urllib.request.urlopen(f'http://localhost:{port}/json').read().decode())[0]['webSocketDebuggerUrl']
+		except:
+			# there is a line in stderr which has the devtools address, we have to find it
+			#	or we fail
+			raw_devtools_ws = None
+			with open(outfile.name, "r") as outfile:
+				# find the line we're looking for
+				for line in outfile.readlines():
+					if 'DevTools' in line:
+						raw_devtools_ws = line.replace('DevTools listening on ','')
+						break
+
+			if not raw_devtools_ws:
+				print('Failed to find raw devtools ws address.')
+				self.exit()
+				return
+
+			if self.debug: print(f'raw devtools connection is {raw_devtools_ws}')
+
+			if self.debug: print('attempting to create target in chrome')
+
+			# open a devtools_connect to the raw_devtools_ws
+			try:
+				self.devtools_connection = create_connection(raw_devtools_ws)
+				self.devtools_connection.settimeout(3)
+				self.current_ws_command_id = 0
+			except:
+				print(f'Failed to open {raw_devtools_ws}, potentially stale copies of Chrome open.  Kill them.')
+				self.exit()
+				return
+
+			# now we create the target which we really want to connect to
+			response = self.get_single_ws_response('Target.createTarget','"url":""')
+			if response['success'] == False:
+				self.exit()
+				print('Target.createTarget failed.')
+				return
+			else:
+				response = response['result']
+			if self.debug: print(f'{response}')
+
+			# pull out the new target_id and create a new connection
+			try:
+				debugger_ws_addr = json.loads(urllib.request.urlopen(f'http://localhost:{port}/json').read().decode())[0]['webSocketDebuggerUrl']
+			except:
+				print('Failed get to debugger address.')
+				return
+
+			# close the low-level connection
+			self.devtools_connection.close()
+
+		# try to open our intended ws connection
+		try:
+			self.devtools_connection = create_connection(debugger_ws_addr)
+			self.devtools_connection.settimeout(3)
+			self.current_ws_command_id = 0
+		except:
+			print(f'Failed to open {debugger_ws_addr}, potentially stale copies of Chrome open.  Kill them.')
+			self.exit()
 			return
-
-		# third, once we have the websocket address we open a connection
-		#	and we are (finally) able to communicate with chrome via devtools!
-		# note this connection must be closed!
-		self.devtools_connection = create_connection(webSocketDebuggerUrl)
-
-		# important, makes sure we don't get stuck
-		#	waiting for messages to arrive
-		self.devtools_connection.settimeout(3)
-
-		# this is incremented globally
-		self.current_ws_command_id = 0
 
 		# prevent downloading files, the /dev/null is redundant
 		if self.debug: print('going to disable downloading')
 		response = self.get_single_ws_response('Page.setDownloadBehavior','"behavior":"deny","downloadPath":"/dev/null"')
 		if response['success'] == False:
 			self.exit()
-			return response
+			return
 		else:
 			response = response['result']
 		if self.debug: print(f'{response}')
-		
+
 		# done
 		return
 	# __init__
@@ -499,11 +570,12 @@ class ChromeDriver:
 				})
 			else:
 				response = response['result']
-			if self.debug: print(f'ws response: {response}')	
+			if self.debug: print(f'ws response: {response}')
 
 		# enable network and domstorage when doing a network_log
 		if self.debug: print('going to enable network logging')
 		response = self.get_single_ws_response('Network.enable')
+
 		if response['success'] == False:
 			self.exit()
 			return response
@@ -622,7 +694,8 @@ class ChromeDriver:
 				for injection in self.injections:
 					if self.debug: print(f'injecting {injection}.js')
 					try:
-						js = json.dumps(open(f'./injections/{injection}', 'r', encoding='utf-8').read())
+						with open(f'./resources/injections/{injection}', 'r', encoding='utf-8') as json_file:
+							js = json.dumps(json_file.read())
 					except:
 						self.exit()
 						return ({
@@ -898,7 +971,9 @@ class ChromeDriver:
 		pending_ws_id_to_cmd[ws_id] = 'html_lang'
 
 		# LINKS
-		js = json.dumps(open('./injections/wbxr_links.js', 'r', encoding='utf-8').read())
+		with open(f'./resources/injections/wbxr_links.js', 'r', encoding='utf-8') as json_file:
+			js = json.dumps(json_file.read())
+		
 		response = self.send_ws_command('Runtime.evaluate',params=f'"expression":{js},"timeout":1000,"returnByValue":true')
 		if response['success'] == False:
 			self.exit()
@@ -928,7 +1003,9 @@ class ChromeDriver:
 		if self.return_page_text or get_text_only:
 			# if we can't load readability it likely isn't installed, raise error
 			try:
-				readability_js = open(os.path.dirname(os.path.abspath(__file__))+'/resources/policyxray/Readability.js', 'r', encoding='utf-8').read()
+				with open('./resources/policyxray/Readability.js', 'r', encoding='utf-8') as json_file:
+					readability_js = json_file.read()
+
 				js = json.dumps(f"""
 					var wbxr_readability = (function() {{
 						{readability_js}
