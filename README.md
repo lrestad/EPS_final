@@ -47,7 +47,10 @@ To see how to control webXray via command-line flags, type the following:
 
 # Using webXray to Analyze Your Own List of Pages
 
-The raison d'être of webXray is to allow you to analyze pages of your choosing.  In order to do so, first place all of the page addresses you wish to scan into a text file and place this file in the "page_lists" directory.  Make sure your addresses start with "http://" or "https://", if not, webXray will not recognize them as valid addresses.  Once you have placed your page list in the proper directory you may run webXray and it will allow you to select your page list.
+The raison d'être of webXray is to allow you to analyze pages of your choosing.  In order to do so, first place all of the page addresses 
+you wish to scan into a text file and place this file in the "page_lists" directory.  Make sure your addresses start with "http://" or 
+"https://", if not, webXray will not recognize them as valid addresses.  Once you have placed your page list in the ./resources/page_lists/ 
+directory you may run webXray and it will allow you to select your page list.
 
 # Viewing and Understanding Reports
 
