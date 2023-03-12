@@ -86,6 +86,9 @@ class ChromeDriver:
 		#	for now
 		#chrome_commands.append('--enable-automation')
 
+		# make sure we can open ws connections
+		chrome_commands.append('--remote-allow-origins=*')
+
 		# use port offset to avoid collissions between processes
 		#	note that if two single scan processes are running they may
 		#	end up using the same connection and bad things will
