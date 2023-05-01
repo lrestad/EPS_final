@@ -1,4 +1,42 @@
-# webXray
+# webXray -- Risk Report Extension
+
+
+
+Modified files:
+- run_webxray.py
+- webxray/Analyzer.py
+- webxray/Reporter.py
+- webxray/Utilities.py
+
+Added files:
+- resources/page_lists/demo_sites.txt
+- webxray/recommendations.csv
+- webxray/template.html
+- webxray/use_risk.csv
+
+
+
+What the project does
+Why the project is useful
+How users can get started with the project
+Where users can get help with your project
+Who maintains and contributes to the project
+
+What was your motivation?
+Why did you build this project?
+What problem does it solve?
+What did you learn?
+What makes your project stand out?
+If your project has a lot of features, consider adding a "Features" section and listing them here.
+
+2. Project Description
+2. Project Description
+4. How to Install and Run the Project
+5. How to Use the Project
+6. Include Credits
+
+
+
 
 webXray is a tool for analyzing webpage traffic and content, extracting legal policies, and identifying the companies which collect user data.  A command line user interface makes webXray easy for non-programmers to use, and those with advanced needs may analyze billions of requests by fully leveraging webXray's distributed architecture.  webXray has been used to run hundreds of concurrent browser sessions distributed across multiple continents.
 
@@ -12,7 +50,7 @@ webXray uses a custom library of domain ownership to chart the flow of data from
 
 More information and detailed installation instructions may be found on the [project website](http://webXray.org).
 
-# Basic Installation
+# Basic Installation (from https://github.com/timlib/webXray.git)
 
 webXray requires Python 3.4+ and Google Chrome to function, pip3 for dependency installation, and Readability.js for text extraction.  These may be installed in the following steps:
 
@@ -54,27 +92,19 @@ you wish to scan into a text file and place this file in the "./resources/page_l
 "./resources/page_lists/" 
 directory you may run webXray and it will allow you to select your page list.
 
-# Viewing and Understanding Reports
+# Viewing and Understanding Risk Reports
 
-Use the interactive mode to guide you to generating an analysis once you have completed your data collection.  When it is completed it will be output to the '/reports' directory.  This will contain a number of csv files:
+After completing "Collect Data" and "Risks and Recommendations", the risk summaries and assigned recommendations by page will be output to the '/resports/\<database\>/summaries' directory.
 
-* __db\_summary.csv__: a basic report of what is in the database and how many pages loaded
-* __stats.csv__: provides top-level stats on how many domains are contacted, cookies, javascript, etc.
-* __aggregated\_tracking\_attribution.csv__: details on percentages of sites tracked by different companies and their subsidiaries
-* __3p\_domain.csv__: most frequently occurring third-party domains
-* __3p\_request.csv__: most frequently occurring third-party requests
-* __3p\_javascript.csv__: most frequently occurring third-party javascript
-* __3p\_uses.csv__: percentages of pages with third-parties performing specified functions
-* __per_site_network_report__: pairings between page domains and third-party domains, you can import this info to network visualization software
- 
-# Advanced Installation: Speed, Parallelization, and Distributed Architecture for Massive Scans
+Each PDF will contain the following information:
+- *URL*: The name of the page being summarized
+- *Date*: The time the report was generated
+- *Stoplight*: And image of a red/yellow/green stoplight representing the high/medium/low risk assignment for the page
+- *Top 10 Third Party Cookies*: The site, usage categories, and number of cookies of the third party domains associated with the highest risk scores
+- *Recommendation*: Recommendations based on the high/medium/low risk assignment for the page
 
-Visit [webxray.org](https://webxray.org) for extensive instructions on how to leverage the most advanced features of webXray.  The software may be used to create multi-billion point datasets, has been leveraged to conduct globally distributed scans, and has been able to clear one million page loads per day in testing.
+# Credits
 
-# Academic Citation
+The original tool was produced by Timothy Libert, and can be found in the [webXray GitHub](https://github.com/timlib/webXray.git) or the [https://webxray.org/](https://webxray.org/).
 
-This tool is produced by Timothy Libert, if you are using it for academic research, please cite the most pertinent publication from his [Google Scholar page](https://scholar.google.com/citations?user=pR9YdCcAAAAJ&hl=en&oi=ao).
-
-# License
-
-This software is GPLv3, open source.
+The edits to the tool were created by Leah Restad, Curt Williams, and Harish Balaji from Carnegie Mellon University.
