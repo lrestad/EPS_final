@@ -693,9 +693,9 @@ class Reporter:
 		for i in range(len(domains)):
 			domain = domains[i]
 			risk = risk_by_3p_domain[domain]
-			if (risk > 8):
+			if (risk >= 18):
 				color = color_string % risk_colors['high']
-			elif (risk > 8):
+			elif (risk >= 10):
 				color = color_string % risk_colors['medium']
 			else:
 				color = color_string % risk_colors['low']
