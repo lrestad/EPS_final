@@ -921,7 +921,7 @@ class Analyzer:
 				cookie_owner = None
 
 			records.append({
-				'accessed'		: result[0].isoformat(),
+				'accessed'		: result[0], #.isoformat(),
 				'start_url'		: result[1],
 				'final_url'		: result[2],
 				'cookie_domain'	: result[3],
