@@ -96,6 +96,9 @@ def interaction():
 	print('\tWould you like to:')
 	print('\t\t[C] Collect Data')
 	print('\t\t[A] Analyze Data')
+	# Start Changes:############################################################
+	print('\t\t[R] Risks and Recommendations')
+	# End Changes:##############################################################
 	print('\t\t[PC] Policy Collect')
 	print('\t\t[PA] Policy Analyze')
 	print('\t\t[Q] Quit')
@@ -104,7 +107,9 @@ def interaction():
 	while True:
 		selection = input("\tSelection: ").lower()
 
-		acceptable_input = ['c','a','pc','pa','q']
+		# Start Changes:########################################################
+		acceptable_input = ['c','a','r','pc','pa','q']
+		# End Changes:##########################################################
 		
 		if selection 	== 'q':
 			quit()
@@ -250,6 +255,33 @@ def interaction():
 		
 		# restart interaction
 		interaction()
+
+	# Start Changes:############################################################
+	elif selection == 'r':	
+		# analyze
+		print('\t==============')
+		print('\tRisks and Recommendations')
+		print('\t==============')
+
+		print('\t----------------------------------------------')
+		print('\tThe following webXray databases are available:')
+		print('\t----------------------------------------------')
+		
+		db_name = utilities.select_wbxr_db()
+		if db_name:
+			print('\tUsing database: %s' % db_name)
+		else:
+			quit()
+
+		print('\tUsing database: %s' % db_name)
+
+		# go do the analysis
+		recommend(db_name)
+		
+		# restart interaction
+		interaction()
+	# End Changes:##############################################################
+
 	elif selection == 'pc':	
 		# analyze
 		print('\t=====================')
@@ -450,6 +482,34 @@ def analyze(db_name):
 	# fyi
 	utilities.print_runtime('Report generation', start_time)
 # analyze
+
+# Start Changes:################################################################
+def recommend(db_name):
+	"""
+	perform recommendation analysis, generate summary PDFs and store them in ./reports/summaries
+	"""
+
+	from webxray.Reporter import Reporter
+
+	# needed to display runtime info
+	start_time = datetime.datetime.now()
+	
+	# set how many tlds you want to produce sub-reports for
+	num_tlds	= None
+
+	# set reports to only get the top X results, set to None to get everything
+	num_results	= None
+
+	# set up a new reporter
+	reporter = Reporter(db_name, config['database_engine'], num_tlds, num_results, flush_domain_owners=False)
+
+	# general the summary PDFs
+	reporter.generate_per_page_pdf_sumary()
+
+	# fyi
+	utilities.print_runtime('Report generation', start_time)
+# recommend
+# End Changes:##################################################################
 
 def single(url):
 	"""

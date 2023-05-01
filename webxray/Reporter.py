@@ -12,6 +12,15 @@ from operator import itemgetter
 from webxray.Analyzer  import Analyzer
 from webxray.Utilities import Utilities
 
+# Start Changes:################################################################
+from webxray.ParseURL import ParseURL
+
+# url  summary libraries
+import jinja2
+import pdfkit
+from datetime import datetime
+# End Changes ##################################################################
+
 class Reporter:
 	"""
 	Manages the production of a number of CSV reports.
@@ -39,6 +48,9 @@ class Reporter:
 
 		# set up the analyzer we will be using throughout
 		self.analyzer			= Analyzer(db_name, db_engine, flush_domain_owners)
+		# Start Changes:########################################################
+		self.parse_url = ParseURL()
+		# End Changes:##########################################################
 		
 		# number of decimal places to round to in reports
 		self.num_decimals		= 2
@@ -60,6 +72,9 @@ class Reporter:
 		
 		# creates a new directory if it doesn't exist already
 		self.report_path = self.utilities.setup_report_dir(self.db_name)
+		# Start Changes:########################################################
+		self.summary_path = self.utilities.setup_summary_dir(self.db_name)
+		# End Changes:##########################################################
 
 		# this is used in various places to get owner information
 		self.domain_owners = self.utilities.get_domain_owner_dict()
@@ -643,6 +658,111 @@ class Reporter:
 
 		self.utilities.write_csv(self.report_path,'all_pages_cookie_dump.csv', csv_rows)
 	# generate_all_pages_request_dump
+
+	# Start Changes:############################################################
+	def generate_pdf_summary(self, page, domains, use_by_3p_domain, risk_by_3p_domain, cookie_count_by_3p_domain):
+		"""
+		Creates summary PDF for one page.
+		"""
+
+		# Helpful strings
+		color_string = '<span style="color: %s;">'
+		stoplight_string = '<p><img src="%s" alt="" width="121" height="265" /></p>'
+		path = self.summary_path + "/" + page.split('.')[0] + ".pdf"
+
+		# Read documented use risk levels
+		risk_recommendations = {}
+		risk_colors = {}
+		risk_stoplights = {}
+		with open('webxray/recommendations.csv', newline='\n') as csvfile:
+			spamreader = csv.reader(csvfile, delimiter=',')
+			for row in spamreader:
+				risk = row[0]
+				risk_colors[risk] = row[1]
+				risk_recommendations[risk] = row[2]
+				risk_stoplights[risk] = row[3]
+		
+		# Set up site_url and data fields
+		context = {
+					'site_url': page, 
+	     			'date': datetime.today().strftime("%d %b, %Y")
+				  }
+		
+		# Set up site, category, and cookie count fields by table row
+		risk_sum = 0
+		for i in range(len(domains)):
+			domain = domains[i]
+			risk = risk_by_3p_domain[domain]
+			if (risk > 8):
+				color = color_string % risk_colors['high']
+			elif (risk > 8):
+				color = color_string % risk_colors['medium']
+			else:
+				color = color_string % risk_colors['low']
+			risk_sum += risk
+			
+			context['site_' + str(i)] = color + domain
+			context['category_' + str(i)] = ', '.join(use_by_3p_domain[domain])
+			context['cookie_' + str(i)] = cookie_count_by_3p_domain[domain]
+
+		# Set up stoplight image and recommendadion text
+		if (risk_sum > 24):
+			context['stoplight'] = stoplight_string % risk_stoplights['high']
+			context['recommendation'] = risk_recommendations['high']
+		elif (risk_sum > 12):
+			context['stoplight'] = stoplight_string % risk_stoplights['medium']
+			context['recommendation'] = risk_recommendations['medium']
+		else:
+			context['stoplight'] = stoplight_string % risk_stoplights['low']
+			context['recommendation'] = risk_recommendations['low']
+
+		# Create PDF
+		template_loader = jinja2.FileSystemLoader('./')
+		template_env = jinja2.Environment(loader=template_loader)
+		template = template_env.get_template('webxray/template.html')
+		output_text = template.render(context)
+		config = pdfkit.configuration(wkhtmltopdf='/usr/local/bin/wkhtmltopdf')
+		pdfkit.from_string(output_text, path, configuration=config)
+	# generate_pdf_summary
+
+	def generate_per_page_pdf_sumary(self):
+		"""
+		Creates summary PDFs for all pages.
+		"""
+
+		print('\t===================================')
+		print('\t Processing Per Site PDF Summaries ')
+		print('\t===================================')
+
+		# get use, risk, and cookie count by 3p domain
+		summary_by_3p_domain 		= self.analyzer.get_summary_by_3p_domain()
+		use_by_3p_domain 			= summary_by_3p_domain['use_by_3p_domain']
+		risk_by_3p_domain 			= summary_by_3p_domain['risk_by_3p_domain']
+		cookie_count_by_3p_domain 	= summary_by_3p_domain['cookie_count_by_3p_domain']
+
+		# find per page risk by 3p domain
+		per_page_risk_by_domain = {}
+		for cookie in self.analyzer.get_all_pages_cookies():
+			page = self.parse_url.get_parsed_domain_info(cookie['start_url'])['result']['domain'] 
+			domain = cookie['cookie_domain']
+			if page != domain and domain in risk_by_3p_domain:
+				if page not in per_page_risk_by_domain:
+					per_page_risk_by_domain[page] = {}
+				per_page_risk_by_domain[page][domain] = risk_by_3p_domain[domain]
+
+		# generate PDFs
+		for page in per_page_risk_by_domain:
+			page_risk_by_domain = sorted(per_page_risk_by_domain[page].items(), key=lambda x:x[1])
+			page_risk_by_domain.reverse()
+
+			domains = []
+			for i in range(10):
+				if i < len(page_risk_by_domain):
+					domains.append(page_risk_by_domain[i][0])
+
+			Reporter.generate_pdf_summary(self, page, domains, use_by_3p_domain, risk_by_3p_domain, cookie_count_by_3p_domain)
+	# generate_per_page_pdf_sumary
+	# End Changes:##############################################################
 
 	def generate_site_host_report(self):
 		"""

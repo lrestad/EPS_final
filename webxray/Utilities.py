@@ -264,6 +264,29 @@ class Utilities:
 		return report_path
 	# setup_report_dir
 
+	# Start Changes:############################################################
+	def setup_summary_dir(self, db_name):
+		"""
+		Create directory for where the summary reports go if it does not exist,
+			returns the path.
+		"""
+		if os.path.exists('./reports/' + db_name) == False:
+			print('\t\tMaking global reports directory at ./reports/' + db_name + '.')
+			os.makedirs('./reports/' + db_name)
+		
+		# set global report_path
+		summary_path = './reports/' + db_name + '/summaries'
+	
+		# set up subdir for this analysis
+		if os.path.exists(summary_path) == False:
+			print('\t\tMaking subdirectory for reports at %s' % summary_path)
+			os.makedirs(summary_path)
+
+		print('\t\tStoring output in %s' % summary_path)
+		return summary_path
+	# setup_summary_dir
+	# End Changes:##############################################################
+
 	def write_csv(self, report_path, file_name, csv_rows, num_decimals=2):
 		"""
 		basic utility function to write list of csv rows to a file

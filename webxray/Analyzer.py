@@ -4,6 +4,9 @@ import json
 import datetime
 import statistics
 import collections
+# Start Changes:################################################################
+import csv
+# End Changes:##################################################################
 
 # custom libraries
 from webxray.Utilities import Utilities
@@ -831,6 +834,54 @@ class Analyzer:
 			'percentage_use_ssl'				: percentage_use_ssl
 			})
 	# get_3p_use_data
+
+	# Start Changes:############################################################
+	def get_summary_by_3p_domain(self):
+		"""
+		For 3p domains get the associated use, risk, and cookie count.
+		"""
+
+		# Read documented use risk levels
+		use_risk = {}
+		with open('webxray/use_risk.csv', newline='\n') as csvfile:
+			spamreader = csv.reader(csvfile, delimiter=',')
+			for row in spamreader:
+				use_risk[row[0]] = row[1]
+
+		# Risk score associated with each use risk level
+		use_risk_score = {'low': 1, 'medium': 5, 'high': 9}
+
+		# Find use by 3p domain
+		use_by_3p_domain = {}
+		for domain,owner_id in self.sql_driver.get_domain_owner_ids():
+			if len(self.domain_owners[owner_id]['uses']) > 0:
+				for use in self.domain_owners[owner_id]['uses']:
+					if not domain in use_by_3p_domain:
+						use_by_3p_domain[domain] = set()
+					use_by_3p_domain[domain].add(use)
+
+		# Find cookie count by 3p domain
+		cookie_count_by_3p_domain = {}
+		for result in self.sql_driver.get_all_pages_cookies():
+			if result[3] not in cookie_count_by_3p_domain:
+				cookie_count_by_3p_domain[result[3]] = 0
+			cookie_count_by_3p_domain[result[3]] += 1
+
+		# Find risk score by 3p domain
+		risk_by_3p_domain = {}
+		for domain in use_by_3p_domain:
+			if domain in cookie_count_by_3p_domain:
+				risk_by_3p_domain[domain] = 0
+				for use in use_by_3p_domain[domain]:
+					risk_by_3p_domain[domain] += cookie_count_by_3p_domain[domain] * use_risk_score[use_risk[use]] / len(use_by_3p_domain[domain])
+
+		return({
+			'use_by_3p_domain'					: use_by_3p_domain,
+			'risk_by_3p_domain'					: risk_by_3p_domain,
+			'cookie_count_by_3p_domain'			: cookie_count_by_3p_domain
+			})
+	# get_summary_by_3p_domain
+	# End Changes:##############################################################
 
 	def get_all_pages_requests(self):
 		"""
